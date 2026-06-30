@@ -21,6 +21,11 @@ export const INBOUND_CHANNEL = process.env.INBOUND_CHANNEL || 'haraka:inbound';
 export const OUTBOUND_LOG_DIR =
   process.env.OUTBOUND_LOG_DIR || path.join(HARAKA_ROOT, 'outbound', 'logs', 'outbound');
 
+// Haraka's core/system log file (stdout redirected here). The admin API tails
+// this to stream live system logs to the UI. Override with HARAKA_LOG_FILE.
+export const HARAKA_LOG_FILE =
+  process.env.HARAKA_LOG_FILE || path.join(HARAKA_ROOT, 'logs', 'haraka.log');
+
 // Outbound submission endpoint used by the send-mail API (the OUTBOUND/587 instance).
 // secure=false means STARTTLS on 587 (set true only for implicit-TLS 465).
 export const OUTBOUND_SMTP = {

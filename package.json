@@ -2,11 +2,15 @@
   "name": "haraka_local",
   "description": "An SMTP Server",
   "version": "0.0.1",
+  "scripts": {
+    "start": "node scripts/run-haraka.mjs"
+  },
   "dependencies": {
     "Haraka": "^3.3.1",
     "haraka-plugin-aliases": "^1.1.0",
     "haraka-plugin-auth-enc-file": "^1.0.3",
     "haraka-plugin-bounce": "^2.2.1",
+    "haraka-plugin-log-reader": "^1.1.1",
     "haraka-plugin-outbound-logger": "github:mr-karan/haraka-plugin-outbound-logger#main",
     "haraka-plugin-watch": "^2.2.3"
   },

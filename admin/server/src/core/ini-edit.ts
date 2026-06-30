@@ -63,3 +63,23 @@ export function deleteIniKey(name: string, section: string, key: string): void {
   }
   writeLines(name, kept);
 }
+
+// Remove an entire [section] header and every line belonging to it, up to the
+// next section header or EOF. The top region (section === '') cannot be removed.
+export function deleteIniSection(name: string, section: string): void {
+  if (!section) return;
+  const lines = readLines(name);
+  const kept: string[] = [];
+  let dropping = false;
+  for (const line of lines) {
+    const hdr = sectionHeader(line);
+    if (hdr !== null) {
+      dropping = hdr === section;
+      if (dropping) continue;
+    }
+    if (dropping) continue;
+    kept.push(line);
+  }
+  writeLines(name, kept);
+}
+

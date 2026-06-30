@@ -2,23 +2,27 @@ import { Page, PageScroll } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { ServerIdentityCard } from './components/ServerIdentityCard';
 import { ConnectionLimitsCard } from './components/ConnectionLimitsCard';
-import { ServerControlCard } from './components/ServerControlCard';
-import { MOCK_SETTINGS } from './settings.mock';
+import { useSettings } from './useSettings';
 
-/** Core server settings: identity, connection limits and process control. */
+/** Core server settings: identity and connection limits (real config files). */
 export function SettingsPage() {
-  const settings = MOCK_SETTINGS;
+  const { settings, loading, busy, error, save } = useSettings();
 
   return (
     <Page className="gap-4">
-      <PageHeader title="Server Settings" description="Identity, connection limits and process control" />
+      <PageHeader title="Server Settings" description="Identity and message/connection limits" />
 
       <PageScroll className="space-y-4">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <ServerIdentityCard settings={settings} />
-          <ServerControlCard />
-        </div>
-        <ConnectionLimitsCard settings={settings} />
+        {error ? (
+          <p className="text-sm text-destructive">{error}</p>
+        ) : loading || !settings ? (
+          <p className="text-sm text-muted-foreground">Loading settings…</p>
+        ) : (
+          <>
+            <ServerIdentityCard settings={settings} busy={busy} onSave={save} />
+            <ConnectionLimitsCard settings={settings} busy={busy} onSave={save} />
+          </>
+        )}
       </PageScroll>
     </Page>
   );

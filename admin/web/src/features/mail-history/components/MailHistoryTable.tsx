@@ -12,14 +12,20 @@ import type { MailRecord } from '../mailHistory.types';
 import { MailHistoryRow } from './MailHistoryRow';
 
 /** Table of recent message deliveries. */
-export function MailHistoryTable({ records }: { records: MailRecord[] }) {
+export function MailHistoryTable({
+  records,
+  loading,
+}: {
+  records: MailRecord[];
+  loading?: boolean;
+}) {
   return (
     <Card>
       <CardContent className="p-0">
         {records.length === 0 ? (
           <EmptyState
             icon={<Mail className="h-8 w-8" />}
-            title="No messages yet"
+            title={loading ? 'Loading history…' : 'No messages yet'}
             description="Sent and received mail will be listed here."
           />
         ) : (

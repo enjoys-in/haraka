@@ -307,6 +307,9 @@ export const PLUGIN_CATALOG: PluginInfo[] = [
     configFile: '', docsUrl: NPM('haraka-plugin-vmta') },
 
   // ── Monitoring ────────────────────────────────────────────────────────
+  { name: 'log-reader', label: 'Log Reader', category: 'Monitoring',
+    description: 'Extracts matching log entries from the Haraka log and serves a connection\u2019s lines over HTTP (/logs/:uuid).',
+    configFile: 'log.reader.ini', docsUrl: DOCS('log-reader') },
   { name: 'elasticsearch', label: 'Elasticsearch', category: 'Monitoring',
     description: 'Stores per-message and per-connection metadata in Elasticsearch.',
     configFile: 'elasticsearch.ini', docsUrl: DOCS('elasticsearch') },

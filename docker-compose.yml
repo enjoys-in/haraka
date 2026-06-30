@@ -1,47 +1,44 @@
-# Spam/AV services for Haraka (run on the host, connect via 127.0.0.1).
+# Scaled Docker topology for local/prod testing:
+# - HAProxy fronts SMTP (:25) and submission (:587)
+# - Multiple Haraka inbound/outbound instances behind HAProxy
+# - Public ports are user-configurable via env vars
 #
-#   docker compose up -d
-#   docker compose ps
-#   docker compose logs -f clamav     # first run downloads virus DBs (slow)
+# Local test defaults (safe non-privileged ports):
+#   SMTP_PUBLIC_PORT=2525
+#   SUBMISSION_PUBLIC_PORT=2587
+#   ADMIN_PUBLIC_PORT=3001
 #
-# Haraka connects to these through published localhost ports:
-#   spamassassin -> 127.0.0.1:783   (config/spamassassin.ini)
-#   rspamd       -> 127.0.0.1:11333 (config/rspamd.ini)
-#   clamav       -> 127.0.0.1:3310  (config/clamd.ini)
-#   redis        -> 127.0.0.1:6379  (karma/limit/watch plugins)
-#
-# Ports are bound to 127.0.0.1 only, so they are not exposed off-host.
+# Production example:
+#   SMTP_PUBLIC_PORT=25 SUBMISSION_PUBLIC_PORT=587 ADMIN_PUBLIC_PORT=3001 docker compose up -d
+
+x-haraka-common: &haraka-common
+  image: haraka-mail
+  init: true
+  restart: unless-stopped
+  networks:
+    mailnet: {}
 
 services:
   spamassassin:
-    # axllent/spamassassin runs `spamd --allowed-ips 0.0.0.0/0` on 0.0.0.0:783
-    # via runit, and refreshes rules with sa-update on start. Do NOT override
-    # `command:` here — that would replace its init script and break startup.
     image: axllent/spamassassin:latest
-    container_name: haraka-spamassassin
     environment:
       - DNS_CHECKS=false
-    ports:
-      - "127.0.0.1:783:783"
+    networks:
+      mailnet: {}
     restart: unless-stopped
 
   rspamd:
     image: rspamd/rspamd:latest
-    container_name: haraka-rspamd
     depends_on:
       - redis
     volumes:
       - ./docker/rspamd/local.d:/etc/rspamd/local.d:ro
-    ports:
-      - "127.0.0.1:11333:11333" # normal scanning worker (used by Haraka)
-      - "127.0.0.1:11334:11334" # controller / web UI
+    networks:
+      mailnet: {}
     restart: unless-stopped
 
   clamav:
     image: clamav/clamav:latest
-    container_name: haraka-clamav
-    ports:
-      - "127.0.0.1:3310:3310"
     volumes:
       - clamav-db:/var/lib/clamav
     healthcheck:
@@ -50,14 +47,13 @@ services:
       timeout: 10s
       retries: 10
       start_period: 120s
+    networks:
+      mailnet: {}
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    container_name: haraka-redis
     command: ["redis-server", "--save", "60", "1"]
-    ports:
-      - "127.0.0.1:6379:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -66,81 +62,142 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+    networks:
+      mailnet: {}
     restart: unless-stopped
 
-  # ---- Haraka, split into three role-based services (all share the image) ----
-  # Linux host networking lets the 127.0.0.1 references in config/*.ini and the
-  # admin status checks reach the spam/AV/redis services published above.
-  # On Docker Desktop, swap to bridge networking + explicit -p port maps and
-  # point the *.ini hosts at the service names instead of 127.0.0.1.
-
-  # Admin API + UI only (port 3001). Manages config, sends mail via :587,
-  # streams inbound events from Redis over WebSocket.
   admin:
     build:
       context: .
       dockerfile: Dockerfile
-    image: haraka-mail
-    container_name: haraka-admin
+    <<: *haraka-common
     depends_on:
       - redis
       - spamassassin
       - rspamd
       - clamav
-    network_mode: host
-    init: true
+      - haproxy
     environment:
       HARAKA_ROLE: admin
       HOST: 0.0.0.0
       PORT: 3001
       HARAKA_CONFIG_DIR: /app/config
-      REDIS_URL: redis://127.0.0.1:6379
-      SMTP_OUT_HOST: 127.0.0.1
+      REDIS_URL: redis://redis:6379
+      SMTP_OUT_HOST: haproxy
       SMTP_OUT_PORT: 587
+      STATUS_SMTP_HOST: haproxy
+      STATUS_SMTP_PORT: 25
+      STATUS_SUBMISSION_HOST: haproxy
+      STATUS_SUBMISSION_PORT: 587
+      STATUS_SPAMD_HOST: spamassassin
+      STATUS_SPAMD_PORT: 783
+      STATUS_RSPAMD_HOST: rspamd
+      STATUS_RSPAMD_PORT: 11333
+      STATUS_CLAMD_HOST: clamav
+      STATUS_CLAMD_PORT: 3310
+      STATUS_REDIS_HOST: redis
+      STATUS_REDIS_PORT: 6379
+      HARAKA_LOG_FILE: /app/logs/haraka.log
+    ports:
+      - "${ADMIN_PUBLIC_PORT:-3001}:3001"
     volumes:
       - ./config:/app/config
       - ./inbound:/app/inbound
       - ./outbound:/app/outbound
-      - ./spool:/app/spool
-      - ./queue:/app/queue
-    restart: unless-stopped
+      - ./logs:/app/logs
 
-  # INBOUND MTA — port 25, anonymous, filters + local delivery, publishes to Redis.
-  haraka-in:
-    image: haraka-mail
-    container_name: haraka-in
+  haraka-in-1:
+    <<: *haraka-common
     depends_on:
-      - admin
       - redis
       - spamassassin
       - rspamd
       - clamav
-    network_mode: host
-    init: true
     environment:
       HARAKA_ROLE: inbound
     volumes:
       - ./inbound:/app/inbound
-      - ./spool:/app/spool
-      - ./queue:/app/queue
-    restart: unless-stopped
+      - ./logs:/app/logs
+      - in1-spool:/app/spool
+      - in1-queue:/app/queue
 
-  # OUTBOUND MSA — port 587, authenticated submission, DKIM sign, MX delivery.
-  haraka-out:
-    image: haraka-mail
-    container_name: haraka-out
+  haraka-in-2:
+    <<: *haraka-common
     depends_on:
-      - admin
-    network_mode: host
-    init: true
+      - redis
+      - spamassassin
+      - rspamd
+      - clamav
+    environment:
+      HARAKA_ROLE: inbound
+    volumes:
+      - ./inbound:/app/inbound
+      - ./logs:/app/logs
+      - in2-spool:/app/spool
+      - in2-queue:/app/queue
+
+  haraka-out-1:
+    <<: *haraka-common
+    depends_on:
+      - redis
+      - spamassassin
+      - rspamd
+      - clamav
     environment:
       HARAKA_ROLE: outbound
     volumes:
       - ./outbound:/app/outbound
-      - ./spool:/app/spool
-      - ./queue:/app/queue
+      - ./logs:/app/logs
+      - out1-spool:/app/spool
+      - out1-queue:/app/queue
+
+  haraka-out-2:
+    <<: *haraka-common
+    depends_on:
+      - redis
+      - spamassassin
+      - rspamd
+      - clamav
+    environment:
+      HARAKA_ROLE: outbound
+    volumes:
+      - ./outbound:/app/outbound
+      - ./logs:/app/logs
+      - out2-spool:/app/spool
+      - out2-queue:/app/queue
+
+  haproxy:
+    image: haproxy:2.9-alpine
+    depends_on:
+      - haraka-in-1
+      - haraka-in-2
+      - haraka-out-1
+      - haraka-out-2
+    ports:
+      - "${SMTP_PUBLIC_PORT:-2525}:25"
+      - "${SUBMISSION_PUBLIC_PORT:-2587}:587"
+    volumes:
+      - ./docker/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      mailnet:
+        ipv4_address: 172.30.0.10
     restart: unless-stopped
 
 volumes:
   clamav-db:
   redis-data:
+  in1-spool:
+  in1-queue:
+  in2-spool:
+  in2-queue:
+  out1-spool:
+  out1-queue:
+  out2-spool:
+  out2-queue:
+
+networks:
+  mailnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

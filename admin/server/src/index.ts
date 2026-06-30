@@ -18,6 +18,13 @@ import { tlsRouter } from './domains/tls/tls.routes';
 import { mailRouter } from './domains/mail/mail.routes';
 import { bannerRouter } from './domains/banner/banner.routes';
 import { logsRouter } from './domains/logs/logs.routes';
+import { aliasesRouter } from './domains/aliases/aliases.routes';
+import { routingRouter } from './domains/routing/routing.routes';
+import { queueRouter } from './domains/queue/queue.routes';
+import { mailHistoryRouter } from './domains/mail-history/mailHistory.routes';
+import { settingsRouter } from './domains/settings/settings.routes';
+import { monitoringRouter } from './domains/monitoring/monitoring.routes';
+import { quarantineRouter } from './domains/quarantine/quarantine.routes';
 import { attachInboundWs } from './domains/mail/inbound-ws';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -37,6 +44,13 @@ app.use('/api/tls', tlsRouter);
 app.use('/api/mail', mailRouter);
 app.use('/api/banner', bannerRouter);
 app.use('/api/logs', logsRouter);
+app.use('/api/aliases', aliasesRouter);
+app.use('/api/routing', routingRouter);
+app.use('/api/queue', queueRouter);
+app.use('/api/mail-history', mailHistoryRouter);
+app.use('/api/settings', settingsRouter);
+app.use('/api/monitoring', monitoringRouter);
+app.use('/api/quarantine', quarantineRouter);
 
 // Serve the built frontend (admin/web/dist) in production.
 const dist = path.join(__dirname, '..', '..', 'web', 'dist');

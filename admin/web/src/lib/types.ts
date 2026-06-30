@@ -182,3 +182,124 @@ export interface InboundEvent {
   raw: string;
   bounce_error?: string;
 }
+
+// Aliases / forwarding (config/aliases). action mirrors the file's semantics.
+export type AliasAction = 'alias' | 'drop' | 'continue';
+
+export interface MailAlias {
+  id: string;
+  address: string;
+  destinations: string[];
+  action: AliasAction;
+}
+
+// Outbound forward routes (config/smtp_forward.ini). "*" is the default route.
+export interface TransportRoute {
+  id: string;
+  domain: string;
+  host: string;
+  port: number;
+  tls: boolean;
+  auth: boolean;
+  isDefault: boolean;
+}
+
+// Outbound spool queue (HARAKA_ROOT/queue qfiles).
+export type QueueState = 'queued' | 'sending' | 'deferred' | 'frozen' | 'bounced';
+
+export interface QueuedMessage {
+  id: string;
+  from: string;
+  to: string[];
+  subject: string;
+  size: number;
+  state: QueueState;
+  attempts: number;
+  nextRetryAt: number | null;
+  lastError: string | null;
+  queuedAt: number;
+}
+
+export interface QueueSummary {
+  total: number;
+  deferred: number;
+  sending: number;
+  frozen: number;
+  oldestAgeSeconds: number;
+}
+
+export interface QueueView {
+  summary: QueueSummary;
+  messages: QueuedMessage[];
+}
+
+// Delivery history derived from Haraka's outbound delivery logs.
+export type MailDirection = 'inbound' | 'outbound';
+export type DeliveryStatus =
+  | 'delivered'
+  | 'received'
+  | 'deferred'
+  | 'bounced'
+  | 'rejected'
+  | 'quarantined';
+
+export interface MailRecord {
+  id: string;
+  direction: MailDirection;
+  from: string;
+  to: string;
+  subject: string;
+  status: DeliveryStatus;
+  size: number;
+  spamScore: number | null;
+  remoteHost: string;
+  timestamp: number;
+}
+
+// Editable server settings sourced from config/me, connection.ini, smtp.ini.
+export interface ServerSettings {
+  hostname: string;
+  helo: string;
+  maxMessageSizeMb: number;
+  inactivityTimeoutSec: number;
+}
+
+// Quarantine spool (HARAKA_ROOT/queue/quarantine).
+export type QuarantineReason = 'spam' | 'virus' | 'policy' | 'dmarc';
+
+export interface QuarantinedMessage {
+  id: string;
+  from: string;
+  to: string;
+  subject: string;
+  reason: QuarantineReason;
+  score: number | null;
+  size: number;
+  quarantinedAt: number;
+}
+
+// Live monitoring snapshot composed from status + queue + delivery history.
+export interface ServiceStatus {
+  key: string;
+  label: string;
+  host: string;
+  port: number;
+  up: boolean;
+}
+
+export interface MonitoringSnapshot {
+  services: ServiceStatus[];
+  queue: {
+    total: number;
+    deferred: number;
+    oldestAgeSeconds: number;
+  };
+  delivery: {
+    total: number;
+    delivered: number;
+    deferred: number;
+    bounced: number;
+  };
+  uptimeSeconds: number;
+  timestamp: number;
+}

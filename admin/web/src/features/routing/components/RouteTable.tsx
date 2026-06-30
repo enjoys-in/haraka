@@ -11,15 +11,22 @@ import { EmptyState } from '@/components/empty-state';
 import type { TransportRoute } from '../routing.types';
 import { RouteRow } from './RouteRow';
 
+interface RouteTableProps {
+  routes: TransportRoute[];
+  loading?: boolean;
+  busy?: boolean;
+  onRemove?: (domain: string) => void;
+}
+
 /** Table of outbound transport routes. */
-export function RouteTable({ routes }: { routes: TransportRoute[] }) {
+export function RouteTable({ routes, loading, busy, onRemove }: RouteTableProps) {
   return (
     <Card>
       <CardContent className="p-0">
         {routes.length === 0 ? (
           <EmptyState
             icon={<RouteIcon className="h-8 w-8" />}
-            title="No routes defined"
+            title={loading ? 'Loading routes…' : 'No routes defined'}
             description="Mail uses direct MX delivery until routes are added."
           />
         ) : (
@@ -27,18 +34,16 @@ export function RouteTable({ routes }: { routes: TransportRoute[] }) {
             <TableHeader>
               <TableRow>
                 <TableHead>Domain</TableHead>
-                <TableHead>Type</TableHead>
                 <TableHead>Host</TableHead>
                 <TableHead className="text-center">Port</TableHead>
                 <TableHead className="text-center">Auth</TableHead>
                 <TableHead className="text-center">TLS</TableHead>
-                <TableHead className="text-center">Prio</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {routes.map((route) => (
-                <RouteRow key={route.id} route={route} />
+                <RouteRow key={route.id} route={route} busy={busy} onRemove={onRemove} />
               ))}
             </TableBody>
           </Table>

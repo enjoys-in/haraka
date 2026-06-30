@@ -17,9 +17,13 @@ run_admin() {
 
 run_haraka() {
   local cfg="$1"
-  echo "[entrypoint] Haraka -c ${cfg}"
+  local logfile="${HARAKA_LOG_FILE:-/app/logs/haraka.log}"
+  mkdir -p "$(dirname "${logfile}")"
+  echo "[entrypoint] Haraka -c ${cfg} (logging to ${logfile})"
   cd "${HARAKA_ROOT}"
-  exec node node_modules/Haraka/bin/haraka -c "${cfg}"
+  # Tee Haraka's output to the shared log file (tailed by the admin API for the
+  # live system-log view) as well as container stdout (docker logs).
+  exec node node_modules/Haraka/bin/haraka -c "${cfg}" > >(tee -a "${logfile}") 2>&1
 }
 
 case "${ROLE}" in
@@ -36,7 +40,9 @@ case "${ROLE}" in
 
     (
       cd "${HARAKA_ROOT}"
-      exec node node_modules/Haraka/bin/haraka -c "${HARAKA_ROOT}"
+      logfile="${HARAKA_LOG_FILE:-/app/logs/haraka.log}"
+      mkdir -p "$(dirname "${logfile}")"
+      exec node node_modules/Haraka/bin/haraka -c "${HARAKA_ROOT}" > >(tee -a "${logfile}") 2>&1
     ) &
     haraka_pid=$!
 

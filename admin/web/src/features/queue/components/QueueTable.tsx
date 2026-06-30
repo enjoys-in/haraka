@@ -12,7 +12,7 @@ import type { QueuedMessage } from '../queue.types';
 import { QueueRow } from './QueueRow';
 
 /** Table of outbound queue messages. */
-export function QueueTable({ messages }: { messages: QueuedMessage[] }) {
+export function QueueTable({ messages, loading }: { messages: QueuedMessage[]; loading?: boolean }) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0 p-4">
@@ -26,7 +26,7 @@ export function QueueTable({ messages }: { messages: QueuedMessage[] }) {
         {messages.length === 0 ? (
           <EmptyState
             icon={<Mails className="h-8 w-8" />}
-            title="Queue is empty"
+            title={loading ? 'Loading queue…' : 'Queue is empty'}
             description="Outbound messages awaiting delivery appear here."
           />
         ) : (
@@ -40,7 +40,6 @@ export function QueueTable({ messages }: { messages: QueuedMessage[] }) {
                 <TableHead className="text-center">Tries</TableHead>
                 <TableHead className="text-right">Size</TableHead>
                 <TableHead className="text-right">Next try</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -19,6 +19,14 @@ import type {
   AccessAcl,
   AccessScope,
   AccessAction,
+  MailAlias,
+  AliasAction,
+  TransportRoute,
+  QueueView,
+  MailRecord,
+  ServerSettings,
+  QuarantinedMessage,
+  MonitoringSnapshot,
 } from './types';
 
 const BASE = '/api';
@@ -193,5 +201,59 @@ export const api = {
 
   logs: {
     list: (limit = 200) => request<{ entries: LogEntry[] }>(`/logs?limit=${limit}`),
+    systemList: (limit = 300) => request<{ entries: LogEntry[] }>(`/logs/system?limit=${limit}`),
+  },
+
+  aliases: {
+    list: () => request<{ aliases: MailAlias[] }>('/aliases'),
+    save: (address: string, destinations: string[], action: AliasAction = 'alias') =>
+      request<{ aliases: MailAlias[] }>('/aliases', {
+        method: 'POST',
+        body: JSON.stringify({ address, destinations, action }),
+      }),
+    remove: (address: string) =>
+      request<{ aliases: MailAlias[] }>('/aliases/remove', {
+        method: 'POST',
+        body: JSON.stringify({ address }),
+      }),
+  },
+
+  routing: {
+    list: () => request<{ routes: TransportRoute[] }>('/routing'),
+    save: (domain: string, host: string, port: number, tls = false) =>
+      request<{ routes: TransportRoute[] }>('/routing', {
+        method: 'POST',
+        body: JSON.stringify({ domain, host, port, tls }),
+      }),
+    remove: (domain: string) =>
+      request<{ routes: TransportRoute[] }>('/routing/remove', {
+        method: 'POST',
+        body: JSON.stringify({ domain }),
+      }),
+  },
+
+  queue: {
+    get: () => request<QueueView>('/queue'),
+  },
+
+  mailHistory: {
+    list: (limit = 200) => request<{ records: MailRecord[] }>(`/mail-history?limit=${limit}`),
+  },
+
+  settings: {
+    get: () => request<{ settings: ServerSettings }>('/settings'),
+    set: (input: Partial<ServerSettings>) =>
+      request<{ settings: ServerSettings }>('/settings', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+  },
+
+  quarantine: {
+    list: () => request<{ messages: QuarantinedMessage[] }>('/quarantine'),
+  },
+
+  monitoring: {
+    get: () => request<MonitoringSnapshot>('/monitoring'),
   },
 };
