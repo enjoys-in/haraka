@@ -21,7 +21,7 @@ recipients, users, DKIM keys, TLS and plugins are all editable from the UI).
 | **Admin API** | Express + TypeScript (Bun/tsx), port `3001` | Reads/writes `config/*` preserving comments, sends mail, streams events |
 | **Admin UI** | Vite + React 18 + Tailwind + shadcn | Dashboard for status, domains, users, plugins, SMTP, DKIM, TLS, spam |
 | **Filtering** | SpamAssassin, Rspamd, ClamAV, Redis (Docker) | Spam scoring + virus scanning, reputation/rate-limit backing store |
-| **Live feed** | Custom `inbound_notify` plugin → Redis pub/sub → WebSocket | Real-time stream of accepted inbound mail to the UI |
+| **Live feed** | Custom `inbound_notify` + `bounce_notify` plugins → Redis pub/sub → WebSocket | Real-time stream of `inbound`, `outbound`, and `bounce` events in one socket |
 
 ```
 ┌────────────┐   :25    ┌─────────────┐  spam/AV  ┌────────────────────────┐
@@ -43,7 +43,7 @@ recipients, users, DKIM keys, TLS and plugins are all editable from the UI).
 config/        Active Haraka config (combined mode) — *.ini, host_list, dkim/
 inbound/       Config + plugins for the INBOUND role  (-c inbound)
 outbound/      Config + plugins for the OUTBOUND role (-c outbound)
-plugins/       Custom plugins (e.g. inbound_notify.js)
+plugins/       Custom plugins (e.g. inbound_notify.js, bounce_notify.js)
 admin/server/  TypeScript config API (domain-driven: src/domains/<feature>)
 admin/web/     React admin UI (src/features/<feature>)
 docker/        Service config (rspamd local.d, etc.)
@@ -115,12 +115,13 @@ This starts SpamAssassin, Rspamd, ClamAV, Redis, plus `admin` (API/UI),
 | `GET /api/status` | Live health of SMTP + spam/AV services |
 | `/api/plugins` | Toggle plugins, edit per-plugin config (from a trusted catalog) |
 | `/api/smtp` | `smtp.ini` listeners and core settings |
-| `/api/auth/users` | Mailbox users (`auth_flat_file.ini`) |
+| `/api/auth/users` | Mailbox users + aliases (`auth_flat_file.ini`, `aliases`) |
 | `/api/domains` | Accepted recipient domains (`host_list`) |
 | `/api/spam` | SpamAssassin / Rspamd / ClamAV config |
 | `/api/dkim` | Generate / verify / delete DKIM keys per domain |
 | `/api/tls` | STARTTLS certificates and settings |
 | `/api/mail` | Send a test message; `GET /ws/inbound` streams accepted mail |
+| `/api/logs` + `/api/logs/stream` | Outbound logger records (JSON logs + SSE stream) |
 
 The config editor only writes files derived from a **server-side catalog**, never
 from client-supplied paths, and domains are regex-validated before use (no path
@@ -136,6 +137,16 @@ traversal).
   Redis is running or Haraka aborts startup.
 - Haraka 3.x renames: `dnsbl` → `dns-list`, `dkim_sign` → `dkim` (the `dkim`
   plugin still reads `config/dkim_sign.ini`).
+- Aliases are managed in JSON file `config/aliases` and require the `aliases`
+  plugin in `config/plugins` (must run before other `hook_rcpt` handlers that
+  depend on rewritten recipients).
+- `block_me` uses `config/block_me.recipient` (dropbox address) and
+  `config/block_me.senders` (allowed forwarders) to populate `mail_from.blocklist`
+  via forwarded spam reports.
+- Custom `inbound_notify` and `bounce_notify` plugins publish unified mail events
+  (`inbound` / `outbound` / `bounce`) to Redis and the admin WebSocket.
+- `outbound-logger` can log delivered/deferred/bounced outbound traffic in JSON
+  (`outbound_logger.ini`), and the admin Logs page consumes this via SSE.
 - DKIM keys live in `config/dkim/<domain>/{private,public,selector,dns}`; generate
   with `cd config/dkim && sh dkim_key_gen.sh <domain>` or from the DKIM page in the UI.
 - `config/smtp.ini` paths are relative to the working directory (`spool_dir=spool`).

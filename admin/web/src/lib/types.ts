@@ -17,6 +17,8 @@ export interface PluginEntry {
   enabled: boolean;
 }
 
+export type PluginRole = 'inbound' | 'outbound' | 'both';
+
 export interface PluginInfo extends PluginEntry {
   label: string;
   category: string;
@@ -27,6 +29,7 @@ export interface PluginInfo extends PluginEntry {
   source: 'core' | 'installed' | 'local' | 'missing';
   available: boolean;
   npmPackage?: string;
+  role: PluginRole;
 }
 
 export interface PluginConfigFile {
@@ -79,6 +82,7 @@ export interface TlsStatus {
 
 export interface AuthUser {
   email: string;
+  aliases: string[];
 }
 
 export interface SpamSettings {
@@ -126,6 +130,17 @@ export interface SendMailResult {
   response: string;
 }
 
+export type LogLevel = 'debug' | 'info' | 'notice' | 'warn' | 'error' | 'crit';
+
+export interface LogEntry {
+  id: string;
+  timestamp: number;
+  level: LogLevel;
+  plugin: string | null;
+  connectionId: string | null;
+  message: string;
+}
+
 // SMTP 220 greeting banner + white-labeling toggles.
 export interface Banner {
   hostname: string;
@@ -137,6 +152,7 @@ export interface Banner {
 
 // Live inbound event pushed over /ws/inbound (from the inbound_notify plugin).
 export interface InboundEvent {
+  event_type: 'inbound' | 'outbound' | 'bounce';
   uuid: string;
   ts: number;
   from: string;
@@ -147,4 +163,5 @@ export interface InboundEvent {
   helo: string;
   spam_score: number | null;
   raw: string;
+  bounce_error?: string;
 }

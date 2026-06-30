@@ -7,8 +7,8 @@ interface InboundWsState {
   clear: () => void;
 }
 
-// Subscribes to the admin inbound WebSocket (/ws/inbound) and keeps a rolling
-// list of the most recent inbound mail events. Auto-reconnects on drop.
+// Subscribes to the admin mail-event WebSocket (/ws/inbound) and keeps a rolling
+// list of recent events (inbound, outbound, bounce). Auto-reconnects on drop.
 export function useInboundWs(max = 100): InboundWsState {
   const [events, setEvents] = useState<InboundEvent[]>([]);
   const [connected, setConnected] = useState(false);

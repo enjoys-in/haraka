@@ -4,7 +4,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { readRaw, writeRaw, configPath } from '../../core/files';
 import { HARAKA_ROOT, PLUGINS_DIR } from '../../config';
-import { PLUGIN_CATALOG, getCatalogEntry, type PluginInfo } from './plugin-catalog';
+import {
+  PLUGIN_CATALOG,
+  getCatalogEntry,
+  getPluginRole,
+  type PluginInfo,
+  type PluginRole,
+} from './plugin-catalog';
 
 export interface PluginEntry {
   name: string;
@@ -23,6 +29,8 @@ export interface PluginListItem extends PluginInfo {
   available: boolean;
   /** npm package providing the plugin, for an install hint when it is missing. */
   npmPackage?: string;
+  /** Which mail flow (inbound/outbound/both) the plugin participates in. */
+  role: PluginRole;
 }
 
 export interface PluginConfigFile {
@@ -104,6 +112,7 @@ export function listPlugins(): PluginListItem[] {
       source,
       available: source !== 'missing',
       npmPackage,
+      role: getPluginRole(info.name),
     };
   });
 
@@ -123,6 +132,7 @@ export function listPlugins(): PluginListItem[] {
       source,
       available: source !== 'missing',
       npmPackage,
+      role: 'both',
     });
   }
   return items;

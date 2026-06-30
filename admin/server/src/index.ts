@@ -17,6 +17,7 @@ import { dkimRouter } from './domains/dkim/dkim.routes';
 import { tlsRouter } from './domains/tls/tls.routes';
 import { mailRouter } from './domains/mail/mail.routes';
 import { bannerRouter } from './domains/banner/banner.routes';
+import { logsRouter } from './domains/logs/logs.routes';
 import { attachInboundWs } from './domains/mail/inbound-ws';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -35,6 +36,7 @@ app.use('/api/dkim', dkimRouter);
 app.use('/api/tls', tlsRouter);
 app.use('/api/mail', mailRouter);
 app.use('/api/banner', bannerRouter);
+app.use('/api/logs', logsRouter);
 
 // Serve the built frontend (admin/web/dist) in production.
 const dist = path.join(__dirname, '..', '..', 'web', 'dist');

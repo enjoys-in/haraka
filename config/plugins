@@ -49,7 +49,10 @@ spf
 # RCPT TO
 # At least one rcpt_to plugin is REQUIRED for inbound email. The simplest
 # plugin is in_host_list, see 'haraka -h rcpt_to.in_host_list' to configure.
+aliases
 rcpt_to.in_host_list
+# Allow users to forward spam to a mailbox and auto-populate mail_from.blocklist.
+block_me
 #qmail-deliverable
 #rcpt_to.ldap
 #rcpt_to.routes
@@ -74,12 +77,15 @@ rspamd
 data.signatures
 # (formerly 'dkim_sign'; renamed to 'dkim' in Haraka 3.x, reads config/dkim_sign.ini)
 dkim
+outbound-logger
 # 'limit' (rate/concurrency) needs Redis at init (docker 'redis'); enable after Redis is up
 #limit
 
 # Real-time: publish each accepted INBOUND message to Redis (admin streams it over
-# WebSocket). Authenticated/relaying (outbound) mail is skipped by the plugin.
+# WebSocket). Event payload has event_type: inbound|outbound.
 inbound_notify
+# Publish outbound bounce events to the same Redis/WebSocket channel.
+bounce_notify
 
 # QUEUE
 # queues: discard  qmail-queue  quarantine  smtp_forward  smtp_proxy

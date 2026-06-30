@@ -13,6 +13,10 @@ queue/*
 !queue/.gitkeep
 spool/*
 !spool/.gitkeep
+logs/outbound/*
+!logs/outbound/.gitkeep
+outbound/logs/outbound/*
+!outbound/logs/outbound/.gitkeep
 
 # Secrets / generated keys (keep these out of version control)
 .env

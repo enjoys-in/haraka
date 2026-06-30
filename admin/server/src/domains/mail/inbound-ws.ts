@@ -1,7 +1,6 @@
-// Inbound mail WebSocket: subscribes to the Redis channel that the Haraka
-// `inbound_notify` plugin publishes accepted INBOUND messages to, and fans
-// each event out to connected browser clients. Inbound only by construction —
-// the plugin never publishes authenticated/outbound mail.
+// Mail-event WebSocket: subscribes to the Redis channel that custom Haraka
+// plugins (inbound_notify + bounce_notify) publish to and fans each event out
+// to connected browser clients.
 import type { Server } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createClient } from 'redis';

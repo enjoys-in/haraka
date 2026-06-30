@@ -15,6 +15,7 @@ import type {
   SendMailInput,
   SendMailResult,
   Banner,
+  LogEntry,
 } from './types';
 
 const BASE = '/api';
@@ -101,10 +102,15 @@ export const api = {
 
   users: {
     list: () => request<{ users: AuthUser[] }>('/auth/users'),
-    upsert: (email: string, password: string) =>
+    create: (email: string, password: string, aliases: string[] = []) =>
       request<{ users: AuthUser[] }>('/auth/users', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, aliases }),
+      }),
+    update: (currentEmail: string, email: string, password?: string, aliases: string[] = []) =>
+      request<{ users: AuthUser[] }>(`/auth/users/${encodeURIComponent(currentEmail)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ email, password, aliases }),
       }),
     remove: (email: string) =>
       request<{ users: AuthUser[] }>(`/auth/users/${encodeURIComponent(email)}`, {
@@ -167,5 +173,9 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(input),
       }),
+  },
+
+  logs: {
+    list: (limit = 200) => request<{ entries: LogEntry[] }>(`/logs?limit=${limit}`),
   },
 };

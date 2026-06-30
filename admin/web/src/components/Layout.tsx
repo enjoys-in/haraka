@@ -1,95 +1,24 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import {
-  LayoutDashboard,
-  Globe,
-  Users,
-  Server,
-  Megaphone,
-  Puzzle,
-  Code2,
-  KeyRound,
-  ShieldCheck,
-  Mail,
-  Lock,
-  Moon,
-  Sun,
-  Menu,
-  X,
-  Zap,
-  Github,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { Suspense, useState } from 'react';
+import { NavLink, Outlet } from 'react-router-dom';
+import { Moon, Sun, Menu, X, Zap, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PageSkeleton } from '@/components/PageSkeleton';
 import { api } from '@/lib/api';
 import { useAsyncData } from '@/lib/use-async';
+import { useDarkMode } from '@/lib/use-dark-mode';
+import { NAV_GROUPS } from '@/routes/nav';
 
-export interface NavItem {
-  value: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
-  {
-    label: 'Overview',
-    items: [{ value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }],
-  },
-  {
-    label: 'Mail',
-    items: [
-      { value: 'mail', label: 'Mail', icon: Mail },
-      { value: 'domains', label: 'Domains', icon: Globe },
-      { value: 'users', label: 'Users', icon: Users },
-    ],
-  },
-  {
-    label: 'Configuration',
-    items: [
-      { value: 'smtp', label: 'SMTP', icon: Server },
-      { value: 'banner', label: 'Banner', icon: Megaphone },
-      { value: 'plugins', label: 'Plugins', icon: Puzzle },
-      { value: 'custom-plugins', label: 'Custom Plugins', icon: Code2 },
-      { value: 'dkim', label: 'DKIM', icon: KeyRound },
-    ],
-  },
-  {
-    label: 'Security',
-    items: [
-      { value: 'tls', label: 'TLS / SSL', icon: Lock },
-      { value: 'spam', label: 'Spam & AV', icon: ShieldCheck },
-    ],
-  },
-];
-
-interface LayoutProps {
-  active: string;
-  onNavigate: (value: string) => void;
-  children: ReactNode;
-}
-
-export function Layout({ active, onNavigate, children }: LayoutProps) {
-  const [dark, setDark] = useState(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved) return saved === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
+export function Layout() {
+  const { dark, toggle } = useDarkMode();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // live liveness probe — succeeds => online, fails => offline
   const { data, error } = useAsyncData(api.status, 8000);
   const isLive = data ? !error : null;
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark);
-    localStorage.setItem('theme', dark ? 'dark' : 'light');
-  }, [dark]);
+  const closeSidebar = () => setSidebarOpen(false);
 
-  const navigate = (value: string) => {
-    onNavigate(value);
-    setSidebarOpen(false);
-  };
-
-  const sidebar = (onClose?: () => void) => (
+  const sidebar = (showClose: boolean) => (
     <>
       <div className="flex items-center justify-between border-b border-border/40 px-5 py-5">
         <div className="flex items-center gap-3">
@@ -105,8 +34,8 @@ export function Layout({ active, onNavigate, children }: LayoutProps) {
             </p>
           </div>
         </div>
-        {onClose && (
-          <Button variant="ghost" size="sm" className="h-7 w-7 px-0 lg:hidden" onClick={onClose}>
+        {showClose && (
+          <Button variant="ghost" size="sm" className="h-7 w-7 px-0 lg:hidden" onClick={closeSidebar}>
             <X className="h-4 w-4" />
           </Button>
         )}
@@ -121,20 +50,22 @@ export function Layout({ active, onNavigate, children }: LayoutProps) {
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const Icon = item.icon;
-                const isActive = active === item.value;
                 return (
-                  <button
-                    key={item.value}
-                    onClick={() => navigate(item.value)}
-                    className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'bg-gradient-to-r from-[#FFA724]/15 to-[#FFA724]/5 text-[#FFA724] shadow-sm ring-1 ring-[#FFA724]/15'
-                        : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
-                    }`}
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={closeSidebar}
+                    className={({ isActive }) =>
+                      `group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-[#FFA724]/15 to-[#FFA724]/5 text-[#FFA724] shadow-sm ring-1 ring-[#FFA724]/15'
+                          : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+                      }`
+                    }
                   >
                     <Icon className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
                     {item.label}
-                  </button>
+                  </NavLink>
                 );
               })}
             </div>
@@ -162,12 +93,7 @@ export function Layout({ active, onNavigate, children }: LayoutProps) {
             >
               <Github className="h-4 w-4" />
             </a>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 rounded-lg px-0"
-              onClick={() => setDark((d) => !d)}
-            >
+            <Button variant="ghost" size="sm" className="h-8 w-8 rounded-lg px-0" onClick={toggle}>
               {dark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4" />}
             </Button>
           </div>
@@ -182,17 +108,14 @@ export function Layout({ active, onNavigate, children }: LayoutProps) {
         className="glass hidden w-[260px] shrink-0 flex-col border-r border-border/40 lg:flex"
         style={{ boxShadow: 'var(--sidebar-shadow)' }}
       >
-        {sidebar()}
+        {sidebar(false)}
       </aside>
 
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setSidebarOpen(false)}
-          />
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={closeSidebar} />
           <aside className="glass animate-fade-in fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-border/40 shadow-2xl">
-            {sidebar(() => setSidebarOpen(false))}
+            {sidebar(true)}
           </aside>
         </div>
       )}
@@ -213,7 +136,7 @@ export function Layout({ active, onNavigate, children }: LayoutProps) {
             size="sm"
             className="h-8 w-8 rounded-lg px-0"
             title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-            onClick={() => setDark((d) => !d)}
+            onClick={toggle}
           >
             {dark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4" />}
           </Button>
@@ -228,7 +151,9 @@ export function Layout({ active, onNavigate, children }: LayoutProps) {
 
         <main className="flex-1 overflow-hidden">
           <div className="animate-fade-in mx-auto flex h-full max-w-7xl flex-col p-4 lg:p-6">
-            {children}
+            <Suspense fallback={<PageSkeleton />}>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>

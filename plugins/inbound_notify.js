@@ -1,10 +1,7 @@
 'use strict'
-// inbound_notify — publishes a compact JSON event to Redis for every accepted
-// INBOUND message, so the admin API can stream them to users over WebSocket.
-//
-// INBOUND ONLY: authenticated/relaying (outbound submission) traffic is skipped,
-// so even if this plugin is loaded on a combined instance it never leaks
-// outbound mail onto the inbound channel.
+// inbound_notify — publishes a compact JSON event to Redis for accepted mail.
+// Event type is `inbound` for normal inbound SMTP and `outbound` for authenticated
+// relaying/submission, so the admin UI can consume one WebSocket stream.
 //
 // Config: config/inbound_notify.ini
 //   [main]
@@ -32,7 +29,7 @@ exports.init_redis = async function () {
   this.client.on('error', (e) => this.logerror(`redis: ${e.message}`))
   try {
     await this.client.connect()
-    this.loginfo(`publishing inbound mail to ${this.redis_url} (${this.channel})`)
+    this.loginfo(`publishing mail events to ${this.redis_url} (${this.channel})`)
   } catch (e) {
     this.logerror(`redis connect failed: ${e.message}`)
   }
@@ -48,13 +45,15 @@ exports.hook_init_child = function (next) {
 
 exports.notify = function (next, connection) {
   const txn = connection?.transaction
-  // skip when no transaction or when this is authenticated/relaying (outbound)
-  if (!txn || connection.relaying) return next()
+  if (!txn) return next()
+
+  const event_type = connection.relaying ? 'outbound' : 'inbound'
 
   const publish = (raw) => {
     try {
       const r = txn.results?.get?.('spamassassin') || {}
       const evt = {
+        event_type,
         uuid: txn.uuid,
         ts: Date.now(),
         from: txn.mail_from?.address || '',

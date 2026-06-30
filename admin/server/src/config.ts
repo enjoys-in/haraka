@@ -15,9 +15,11 @@ export const PORT = Number(process.env.PORT || 3001);
 // Bind host: loopback by default; set HOST=0.0.0.0 to expose (e.g. in Docker).
 export const HOST = process.env.HOST || '127.0.0.1';
 
-// Redis channel the inbound_notify Haraka plugin publishes accepted inbound mail to.
+// Redis channel used by inbound_notify/bounce_notify to publish mail events.
 export const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 export const INBOUND_CHANNEL = process.env.INBOUND_CHANNEL || 'haraka:inbound';
+export const OUTBOUND_LOG_DIR =
+  process.env.OUTBOUND_LOG_DIR || path.join(HARAKA_ROOT, 'outbound', 'logs', 'outbound');
 
 // Outbound submission endpoint used by the send-mail API (the OUTBOUND/587 instance).
 // secure=false means STARTTLS on 587 (set true only for implicit-TLS 465).

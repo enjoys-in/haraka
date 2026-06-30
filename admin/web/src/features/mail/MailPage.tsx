@@ -18,7 +18,7 @@ export function MailPage() {
           Mail
         </h1>
         <p className="mt-1 text-sm text-muted-foreground/70">
-          Send via the outbound API (587) and watch inbound mail arrive live (:25).
+          Send via the outbound API (587) and watch live inbound, outbound and bounce events.
         </p>
       </div>
       <PageScroll>
@@ -99,9 +99,9 @@ function InboundCard() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-              <Inbox className="h-4 w-4 text-[#FFA724]" /> Live inbound
+              <Inbox className="h-4 w-4 text-[#FFA724]" /> Live mail events
             </CardTitle>
-            <CardDescription>Streamed from :25 over WebSocket</CardDescription>
+            <CardDescription>Streamed over one WebSocket channel with event type labels</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <span
@@ -126,7 +126,7 @@ function InboundCard() {
             <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
               <div>
                 <Inbox className="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
-                <p>Waiting for inbound mail…</p>
+                <p>Waiting for mail events…</p>
               </div>
             </div>
           ) : (
@@ -144,16 +144,20 @@ function InboundRow({ evt }: { evt: InboundEvent }) {
     <div className="rounded-lg border border-border/40 bg-accent/20 p-2.5 transition-colors hover:bg-accent/40">
       <div className="flex items-center justify-between gap-2">
         <span className="truncate font-mono text-xs font-medium">{evt.from || '(empty)'}</span>
-        <span className="shrink-0 text-[10px] text-muted-foreground/70">
-          {new Date(evt.ts).toLocaleTimeString()}
-        </span>
+        <div className="flex items-center gap-2">
+          <EventTypeBadge type={evt.event_type} />
+          <span className="shrink-0 text-[10px] text-muted-foreground/70">
+            {new Date(evt.ts).toLocaleTimeString()}
+          </span>
+        </div>
       </div>
       <div className="mt-0.5 truncate text-sm">{evt.subject || '(no subject)'}</div>
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground/70">
         <span className="truncate">→ {evt.to.join(', ')}</span>
-        <span>{evt.remote_ip}</span>
+        {evt.remote_ip && <span>{evt.remote_ip}</span>}
         {evt.spam_score !== null && <span>spam {evt.spam_score}</span>}
         <span>{evt.bytes} B</span>
+        {evt.event_type === 'bounce' && evt.bounce_error && <span>error: {evt.bounce_error}</span>}
         {evt.raw && (
           <button
             type="button"
@@ -171,4 +175,14 @@ function InboundRow({ evt }: { evt: InboundEvent }) {
       )}
     </div>
   );
+}
+
+function EventTypeBadge({ type }: { type: InboundEvent['event_type'] }) {
+  const classes =
+    type === 'inbound'
+      ? 'border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-400'
+      : type === 'outbound'
+        ? 'border-violet-500/20 bg-violet-500/10 text-violet-600 dark:text-violet-400'
+        : 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400';
+  return <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${classes}`}>{type}</span>;
 }

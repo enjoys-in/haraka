@@ -230,7 +230,7 @@ export const PLUGIN_CATALOG: PluginInfo[] = [
   // ── RCPT TO ───────────────────────────────────────────────────────────
   { name: 'aliases', label: 'Aliases', category: 'RCPT TO',
     description: 'Expands email aliases to one or more real recipient addresses.',
-    configFile: '', docsUrl: DOCS('aliases') },
+    configFile: 'aliases', docsUrl: DOCS('aliases') },
   { name: 'recipient-routes', label: 'Recipient Routes', category: 'RCPT TO',
     description: 'Validates recipients and routes them to specific next-hop destinations.',
     configFile: 'recipient-routes.ini', docsUrl: DOCS('recipient-routes') },
@@ -292,7 +292,7 @@ export const PLUGIN_CATALOG: PluginInfo[] = [
   // ── Outbound ──────────────────────────────────────────────────────────
   { name: 'outbound-logger', label: 'Outbound Logger', category: 'Outbound',
     description: 'JSON logging of outbound traffic with delivery and bounce metadata.',
-    configFile: '', docsUrl: DOCS('outbound-logger') },
+      configFile: 'outbound_logger.ini', docsUrl: DOCS('outbound-logger') },
   { name: 'accounting_files', label: 'Accounting Files', category: 'Outbound',
     description: 'Stores and archives custom accounting information about outbound traffic.',
     configFile: '', docsUrl: NPM('haraka-plugin-accounting_files') },
@@ -316,4 +316,46 @@ const BY_NAME = new Map(PLUGIN_CATALOG.map((p) => [p.name, p]));
 
 export function getCatalogEntry(name: string): PluginInfo | undefined {
   return BY_NAME.get(name);
+}
+
+/**
+ * Which mail flow a plugin applies to. `inbound` plugins run while receiving
+ * mail from the outside world, `outbound` plugins run while Haraka delivers
+ * mail it has accepted, and `both` run in either direction.
+ */
+export type PluginRole = 'inbound' | 'outbound' | 'both';
+
+// Default role for every plugin in a category. Most SMTP-reception stages are
+// inbound; delivery/queue and core infrastructure run in both directions.
+const ROLE_BY_CATEGORY: Record<string, PluginRole> = {
+  Core: 'both',
+  Connection: 'inbound',
+  HELO: 'inbound',
+  'TLS / Security': 'both',
+  Authentication: 'outbound',
+  'MAIL FROM': 'inbound',
+  'RCPT TO': 'inbound',
+  'Data / Headers': 'inbound',
+  'Anti-Spam': 'inbound',
+  'Anti-Virus': 'inbound',
+  'Queue / Delivery': 'both',
+  Outbound: 'outbound',
+  Monitoring: 'both',
+};
+
+// Per-plugin exceptions where the category default is too coarse.
+const ROLE_OVERRIDES: Record<string, PluginRole> = {
+  dkim: 'both', // verifies inbound signatures and signs outbound mail
+  opendkim: 'both',
+  mailauth: 'inbound', // SPF/DKIM/DMARC verification of incoming mail
+  relay: 'both', // governs both who may relay and outbound relay routing
+  'save-sent': 'outbound',
+};
+
+/** Resolve the mail-flow role for a plugin (override first, then category). */
+export function getPluginRole(name: string): PluginRole {
+  const override = ROLE_OVERRIDES[name];
+  if (override) return override;
+  const entry = BY_NAME.get(name);
+  return (entry && ROLE_BY_CATEGORY[entry.category]) ?? 'both';
 }

@@ -18,7 +18,9 @@ mail_from.is_resolvable
 spf
 
 # RCPT TO — recipient MUST be a local domain (config/host_list)
+aliases
 rcpt_to.in_host_list
+block_me
 
 # DATA — anti-abuse + content scanning
 bounce
@@ -34,6 +36,8 @@ dkim
 
 # Real-time: publish each accepted inbound message to Redis (admin WS reads it)
 inbound_notify
+# Publish bounce events to the same Redis/WebSocket channel.
+bounce_notify
 
 # QUEUE — deliver locally (config/smtp_forward.ini -> mailbox backend / sink)
 queue/smtp_forward

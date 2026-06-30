@@ -12,6 +12,11 @@ auth/flat_file
 # DATA — sanitize headers and SIGN outgoing mail with DKIM (config/dkim_sign.ini)
 headers
 dkim
+outbound-logger
+
+# Real-time mail events over Redis/WebSocket.
+inbound_notify
+bounce_notify
 
 # Relaying clients have recipients auto-accepted (no rcpt_to plugin needed);
 # Haraka's native outbound queue delivers to each recipient's MX.
