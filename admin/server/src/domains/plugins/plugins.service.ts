@@ -59,12 +59,20 @@ export function resolveSource(name: string): { source: PluginSource; npmPackage?
   return { source: 'missing', npmPackage };
 }
 
-// First token of a line, ignoring an optional leading '#'.
-function firstToken(line: string): string | null {
-  const rest = line.replace(/^\s*#?\s*/, '').trim();
-  if (!rest) return null;
-  const token = rest.split(/\s+/)[0];
-  return SAFE_NAME.test(token) ? token : null;
+// Identify the plugin directive on a config/plugins line, or null if the line
+// is blank or documentation prose. An UNcommented line is always a real plugin
+// directive. A COMMENTED line counts as a disabled plugin only when it is just
+// a known plugin token on its own - so prose that merely begins with a plugin
+// name (e.g. "# rspamd scoring (config/rspamd.ini ...)") is never miscounted.
+function pluginDirective(line: string): { name: string; commented: boolean } | null {
+  const commented = /^\s*#/.test(line);
+  const body = line.replace(/^\s*#?\s*/, '').trim();
+  if (!body) return null;
+  const parts = body.split(/\s+/);
+  const name = parts[0];
+  if (!SAFE_NAME.test(name)) return null;
+  if (commented && (!CATALOG_NAMES.has(name) || parts.length > 1)) return null;
+  return { name, commented };
 }
 
 /** Raw enable/disable state parsed from config/plugins. Active (uncommented)
@@ -74,12 +82,10 @@ export function readPlugins(): PluginEntry[] {
   const lines = readRaw('plugins').split(/\r?\n/);
   const out: PluginEntry[] = [];
   for (const line of lines) {
-    const commented = /^\s*#/.test(line);
-    const token = firstToken(line);
-    if (!token) continue;
-    if (commented && !CATALOG_NAMES.has(token)) continue; // skip prose comments
-    if (out.find((p) => p.name === token)) continue;
-    out.push({ name: token, enabled: !commented });
+    const d = pluginDirective(line);
+    if (!d) continue;
+    if (out.find((p) => p.name === d.name)) continue;
+    out.push({ name: d.name, enabled: !d.commented });
   }
   return out;
 }
@@ -140,7 +146,8 @@ export function setPlugin(name: string, enabled: boolean): PluginListItem[] {
   const lines = readRaw('plugins').split(/\r?\n/);
   let found = false;
   for (let i = 0; i < lines.length; i++) {
-    if (firstToken(lines[i]) !== name) continue;
+    const d = pluginDirective(lines[i]);
+    if (!d || d.name !== name) continue;
     found = true;
     const rest = lines[i].replace(/^\s*#?\s*/, '');
     lines[i] = enabled ? rest : `#${rest}`;

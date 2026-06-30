@@ -4,6 +4,7 @@ import {
   Globe,
   Users,
   Server,
+  Megaphone,
   Puzzle,
   Code2,
   KeyRound,
@@ -45,6 +46,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: 'Configuration',
     items: [
       { value: 'smtp', label: 'SMTP', icon: Server },
+      { value: 'banner', label: 'Banner', icon: Megaphone },
       { value: 'plugins', label: 'Plugins', icon: Puzzle },
       { value: 'custom-plugins', label: 'Custom Plugins', icon: Code2 },
       { value: 'dkim', label: 'DKIM', icon: KeyRound },

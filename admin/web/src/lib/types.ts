@@ -126,6 +126,15 @@ export interface SendMailResult {
   response: string;
 }
 
+// SMTP 220 greeting banner + white-labeling toggles.
+export interface Banner {
+  hostname: string;
+  greeting: string;
+  bannerChars: number;
+  showVersion: boolean;
+  preview: string;
+}
+
 // Live inbound event pushed over /ws/inbound (from the inbound_notify plugin).
 export interface InboundEvent {
   uuid: string;

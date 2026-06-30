@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Combobox } from '@/components/ui/combobox';
 import { Page, PageScroll } from '@/components/page';
 
 const NAME_RE = /^[a-z0-9][a-z0-9._-]*$/;
@@ -142,17 +143,18 @@ export function CustomPluginsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Starter template</Label>
-              <select
+              <Combobox
+                options={templates.map((t) => ({
+                  value: t.id,
+                  label: t.label,
+                  description: t.hook,
+                }))}
                 value={templateId}
-                onChange={(e) => setTemplateId(e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-              >
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setTemplateId}
+                placeholder="Select a template…"
+                searchPlaceholder="Search templates…"
+                emptyText="No templates found."
+              />
               {selected && (
                 <p className="text-[11px] text-muted-foreground">
                   <code className="text-foreground">{selected.hook}</code> — {selected.description}
@@ -163,15 +165,17 @@ export function CustomPluginsPage() {
 
           {selected && (
             <div>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowCode((v) => !v)}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                className="h-auto gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 <Eye className="h-3.5 w-3.5" />
                 {showCode ? 'Hide' : 'Preview'} template code
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showCode ? 'rotate-180' : ''}`} />
-              </button>
+              </Button>
               {showCode && (
                 <pre className="mt-2 max-h-72 overflow-auto rounded-md bg-muted p-3 text-xs leading-relaxed">
                   {selected.code.replace(/__PLUGIN_NAME__/g, name || 'my_plugin')}
@@ -181,10 +185,10 @@ export function CustomPluginsPage() {
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <label className="flex items-center gap-2 text-sm">
+            <Label className="flex items-center gap-2 text-sm font-normal">
               <Switch checked={enableNow} onCheckedChange={setEnableNow} />
               Enable in <code>config/plugins</code> now
-            </label>
+            </Label>
             <Button onClick={() => void create()} disabled={creating || !NAME_RE.test(name)}>
               {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Create plugin

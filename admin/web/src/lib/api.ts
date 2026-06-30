@@ -14,6 +14,7 @@ import type {
   DkimVerifyResult,
   SendMailInput,
   SendMailResult,
+  Banner,
 } from './types';
 
 const BASE = '/api';
@@ -154,6 +155,15 @@ export const api = {
   mail: {
     send: (input: SendMailInput) =>
       request<{ result: SendMailResult }>('/mail/send', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+  },
+
+  banner: {
+    get: () => request<{ banner: Banner }>('/banner'),
+    set: (input: Partial<Banner>) =>
+      request<{ banner: Banner }>('/banner', {
         method: 'POST',
         body: JSON.stringify(input),
       }),

@@ -11,6 +11,7 @@ import { DkimPage } from '@/features/dkim/DkimPage';
 import { SpamPage } from '@/features/spam/SpamPage';
 import { TlsPage } from '@/features/tls/TlsPage';
 import { MailPage } from '@/features/mail/MailPage';
+import { BannerPage } from '@/features/banner/BannerPage';
 
 const PAGES: Record<string, React.ReactNode> = {
   dashboard: <Dashboard />,
@@ -18,6 +19,7 @@ const PAGES: Record<string, React.ReactNode> = {
   domains: <DomainsPage />,
   users: <UsersPage />,
   smtp: <SmtpPage />,
+  banner: <BannerPage />,
   plugins: <PluginsPage />,
   'custom-plugins': <CustomPluginsPage />,
   dkim: <DkimPage />,

@@ -10,6 +10,13 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Page, PageScroll } from '@/components/page';
 
 interface DnsRecord {
@@ -198,15 +205,19 @@ export function DkimPage() {
           </div>
           <div className="space-y-1.5">
             <Label>Key size</Label>
-            <select
-              value={keySize}
-              onChange={(e) => setKeySize(Number(e.target.value))}
-              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            <Select
+              value={String(keySize)}
+              onValueChange={(v) => setKeySize(Number(v))}
             >
-              <option value={1024}>1024</option>
-              <option value={2048}>2048</option>
-              <option value={4096}>4096</option>
-            </select>
+              <SelectTrigger className="w-[110px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1024">1024</SelectItem>
+                <SelectItem value="2048">2048</SelectItem>
+                <SelectItem value="4096">4096</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Button onClick={() => void generate()} disabled={generating}>
             <KeyRound className="h-4 w-4" />
