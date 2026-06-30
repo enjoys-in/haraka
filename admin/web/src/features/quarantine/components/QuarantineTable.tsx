@@ -12,14 +12,20 @@ import type { QuarantinedMessage } from '../quarantine.types';
 import { QuarantineRow } from './QuarantineRow';
 
 /** Table of quarantined messages awaiting review. */
-export function QuarantineTable({ messages }: { messages: QuarantinedMessage[] }) {
+export function QuarantineTable({
+  messages,
+  loading,
+}: {
+  messages: QuarantinedMessage[];
+  loading?: boolean;
+}) {
   return (
     <Card>
       <CardContent className="p-0">
         {messages.length === 0 ? (
           <EmptyState
             icon={<ShieldAlert className="h-8 w-8" />}
-            title="Quarantine is empty"
+            title={loading ? 'Loading quarantine…' : 'Quarantine is empty'}
             description="Held messages awaiting review will appear here."
           />
         ) : (
@@ -33,7 +39,6 @@ export function QuarantineTable({ messages }: { messages: QuarantinedMessage[] }
                 <TableHead className="text-center">Score</TableHead>
                 <TableHead className="text-right">Size</TableHead>
                 <TableHead className="text-right">When</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -1,21 +1,24 @@
 import { Page, PageScroll } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { api } from '@/lib/api';
+import { useAsyncData } from '@/lib/use-async';
 import { QuarantineTable } from './components/QuarantineTable';
-import { MOCK_QUARANTINE } from './quarantine.mock';
 
-/** Quarantine review: release or delete held spam / virus / policy messages. */
+/** Quarantine review: held spam / virus / policy messages (read-only). */
 export function QuarantinePage() {
-  const messages = MOCK_QUARANTINE;
+  const { data, loading, error } = useAsyncData(() => api.quarantine.list(), 15000);
+  const messages = data?.messages ?? [];
 
   return (
     <Page className="gap-4">
-      <PageHeader
-        title="Quarantine"
-        description="Review, release or delete held messages"
-      />
+      <PageHeader title="Quarantine" description="Messages held on disk for review" />
 
       <PageScroll className="space-y-4">
-        <QuarantineTable messages={messages} />
+        {error ? (
+          <p className="text-sm text-destructive">{error}</p>
+        ) : (
+          <QuarantineTable messages={messages} loading={loading} />
+        )}
       </PageScroll>
     </Page>
   );

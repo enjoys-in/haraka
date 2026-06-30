@@ -1,9 +1,9 @@
 import { Save, Loader2, Settings2, ChevronDown, ExternalLink } from 'lucide-react';
 import type { PluginInfo } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { MonacoCodeEditor } from '@/components/MonacoCodeEditor';
 import { usePluginConfig } from '../usePluginConfig';
 import { AccessConfigPanel } from './AccessConfigPanel';
 
@@ -112,9 +112,11 @@ function ConfigEditor({ plugin }: { plugin: PluginInfo }) {
         <p className="py-4 text-sm text-destructive">{error}</p>
       ) : (
         <>
-          <Textarea
+          <MonacoCodeEditor
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={setContent}
+            language="ini"
+            height={300}
             placeholder={`; config/${plugin.configFile} is empty — add settings here`}
           />
           <div className="mt-2 flex justify-end">

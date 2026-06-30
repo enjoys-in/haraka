@@ -12,6 +12,13 @@ import {
   Code2,
   ArrowDownToLine,
   ArrowUpFromLine,
+  Activity,
+  AtSign,
+  History,
+  Mails,
+  Route as RouteIcon,
+  Settings as SettingsIcon,
+  ShieldAlert,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { PATHS } from './paths';
@@ -34,6 +41,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Overview',
     items: [
       { to: PATHS.dashboard, label: 'Dashboard', icon: LayoutDashboard },
+      { to: PATHS.monitoring, label: 'Live Monitor', icon: Activity },
       { to: PATHS.logs, label: 'Logs', icon: ScrollText },
     ],
   },
@@ -41,16 +49,21 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Mail',
     items: [
       { to: PATHS.mail, label: 'Mail', icon: Mail },
+      { to: PATHS.mailHistory, label: 'Mail History', icon: History },
+      { to: PATHS.queue, label: 'Queue', icon: Mails },
       { to: PATHS.domains, label: 'Domains', icon: Globe },
       { to: PATHS.users, label: 'Users', icon: Users },
+      { to: PATHS.aliases, label: 'Aliases', icon: AtSign },
     ],
   },
   {
     label: 'Configuration',
     items: [
       { to: PATHS.smtp, label: 'SMTP', icon: Server },
+      { to: PATHS.routing, label: 'Routing', icon: RouteIcon },
       { to: PATHS.banner, label: 'Banner', icon: Megaphone },
       { to: PATHS.dkim, label: 'DKIM', icon: KeyRound },
+      { to: PATHS.settings, label: 'Settings', icon: SettingsIcon },
     ],
   },
   {
@@ -66,6 +79,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: PATHS.tls, label: 'TLS / SSL', icon: Lock },
       { to: PATHS.spam, label: 'Spam & AV', icon: ShieldCheck },
+      { to: PATHS.quarantine, label: 'Quarantine', icon: ShieldAlert },
     ],
   },
 ];

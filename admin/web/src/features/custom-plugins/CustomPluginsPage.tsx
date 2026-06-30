@@ -17,11 +17,11 @@ import type { CustomPlugin, PluginTemplate } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Combobox } from '@/components/ui/combobox';
+import { MonacoCodeEditor } from '@/components/MonacoCodeEditor';
 import { Page, PageScroll } from '@/components/page';
 
 const NAME_RE = /^[a-z0-9][a-z0-9._-]*$/;
@@ -334,11 +334,11 @@ function CodeEditor({ name }: { name: string }) {
         <p className="py-4 text-sm text-destructive">{error}</p>
       ) : (
         <>
-          <Textarea
+          <MonacoCodeEditor
             value={content}
-            spellCheck={false}
-            onChange={(e) => setContent(e.target.value)}
-            className="min-h-[18rem] font-mono text-xs"
+            onChange={setContent}
+            language="javascript"
+            height={320}
           />
           <div className="mt-2 flex justify-end">
             <Button size="sm" onClick={() => void save()} disabled={saving}>
