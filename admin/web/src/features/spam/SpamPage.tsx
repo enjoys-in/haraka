@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Page, PageScroll } from '@/components/page';
 
 type Group = keyof SpamSettings;
 
@@ -60,30 +61,32 @@ export function SpamPage() {
   }
 
   return (
-    <div className="space-y-4">
-      {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+    <Page>
+      <PageScroll>
+        {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
-      {form &&
-        (Object.keys(FIELDS) as Group[]).map((group) => (
-          <Card key={group}>
-            <CardHeader>
-              <CardTitle>{TITLES[group]}</CardTitle>
-              <CardDescription>config/{group}.ini</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-2">
-              {FIELDS[group].map((field) => (
-                <div key={field.key} className="space-y-1.5">
-                  <Label>{field.label}</Label>
-                  <Input
-                    value={(form[group] as Record<string, string>)[field.key] ?? ''}
-                    onChange={(e) => update(group, field.key, e.target.value)}
-                  />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        ))}
+        {form &&
+          (Object.keys(FIELDS) as Group[]).map((group) => (
+            <Card key={group}>
+              <CardHeader>
+                <CardTitle>{TITLES[group]}</CardTitle>
+                <CardDescription>config/{group}.ini</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2">
+                {FIELDS[group].map((field) => (
+                  <div key={field.key} className="space-y-1.5">
+                    <Label>{field.label}</Label>
+                    <Input
+                      value={(form[group] as Record<string, string>)[field.key] ?? ''}
+                      onChange={(e) => update(group, field.key, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+      </PageScroll>
 
       {form && (
         <Button onClick={() => void save()} disabled={saving}>
@@ -91,6 +94,6 @@ export function SpamPage() {
           Save spam settings
         </Button>
       )}
-    </div>
+    </Page>
   );
 }

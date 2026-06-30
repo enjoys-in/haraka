@@ -33,6 +33,47 @@ export interface PluginConfigFile {
   exists: boolean;
 }
 
+export interface CustomPlugin {
+  name: string;
+  enabled: boolean;
+  size: number;
+  modified: number;
+}
+
+export interface CustomPluginDetail extends CustomPlugin {
+  content: string;
+}
+
+export interface PluginTemplate {
+  id: string;
+  label: string;
+  hook: string;
+  description: string;
+  code: string;
+}
+
+export interface CertInfo {
+  subject: string;
+  issuer: string;
+  validFrom: string;
+  validTo: string;
+  daysRemaining: number;
+  altNames: string[];
+  fingerprint: string;
+  serialNumber: string;
+  selfSigned: boolean;
+  expired: boolean;
+}
+
+export interface TlsStatus {
+  enabled: boolean;
+  certFile: string;
+  keyFile: string;
+  certExists: boolean;
+  keyExists: boolean;
+  info: CertInfo | null;
+}
+
 export interface AuthUser {
   email: string;
 }
@@ -65,4 +106,33 @@ export interface DkimVerifyResult {
   published: string;
   expected: string;
   message: string;
+}
+
+export interface SendMailInput {
+  from?: string;
+  to: string;
+  subject?: string;
+  text?: string;
+  html?: string;
+}
+
+export interface SendMailResult {
+  messageId: string;
+  accepted: string[];
+  rejected: string[];
+  response: string;
+}
+
+// Live inbound event pushed over /ws/inbound (from the inbound_notify plugin).
+export interface InboundEvent {
+  uuid: string;
+  ts: number;
+  from: string;
+  to: string[];
+  subject: string;
+  bytes: number;
+  remote_ip: string;
+  helo: string;
+  spam_score: number | null;
+  raw: string;
 }

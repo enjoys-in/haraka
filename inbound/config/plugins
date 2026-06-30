@@ -1,0 +1,39 @@
+# INBOUND instance — MTA on port 25.
+# Anonymous mail FROM the internet TO local domains (config/host_list).
+# NO AUTH is offered here. Heavy anti-abuse + content filtering, then local delivery.
+
+status
+
+# CONNECT
+# block known-bad senders (config/dnsbl.zones)
+dns-list
+
+# HELO
+helo.checks
+# STARTTLS is offered (opportunistic) but AUTH is intentionally NOT loaded
+tls
+
+# MAIL FROM
+mail_from.is_resolvable
+spf
+
+# RCPT TO — recipient MUST be a local domain (config/host_list)
+rcpt_to.in_host_list
+
+# DATA — anti-abuse + content scanning
+bounce
+headers
+uribl
+attachment
+clamd
+spamassassin
+rspamd
+data.signatures
+# verify inbound DKIM signatures (no private keys needed)
+dkim
+
+# Real-time: publish each accepted inbound message to Redis (admin WS reads it)
+inbound_notify
+
+# QUEUE — deliver locally (config/smtp_forward.ini -> mailbox backend / sink)
+queue/smtp_forward

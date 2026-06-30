@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Page, PageScroll } from '@/components/page';
 
 type Row = { key: string; value: string };
 
@@ -38,48 +39,55 @@ export function SmtpPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>SMTP settings</CardTitle>
-        <CardDescription>Top-level keys in config/smtp.ini (e.g. listen, nodes).</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
-        {error && <p className="text-sm text-destructive">{error}</p>}
+    <Page>
+      <Card>
+        <CardHeader>
+          <CardTitle>SMTP settings</CardTitle>
+          <CardDescription>Top-level keys in config/smtp.ini (e.g. listen, nodes).</CardDescription>
+        </CardHeader>
+      </Card>
 
-        {rows.map((row, i) => (
-          <div key={i} className="grid grid-cols-[1fr_2fr] gap-2">
-            <Input
-              value={row.key}
-              placeholder="key"
-              onChange={(e) => update(i, { key: e.target.value })}
-            />
-            <Input
-              value={row.value}
-              placeholder="value"
-              onChange={(e) => update(i, { value: e.target.value })}
-            />
-          </div>
-        ))}
+      <PageScroll>
+        <Card>
+          <CardContent className="space-y-3 pt-6">
+            {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <div className="flex items-center gap-2 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setRows((r) => [...r, { key: '', value: '' }])}
-          >
-            <Plus className="h-4 w-4" />
-            Add field
-          </Button>
-          <Button size="sm" onClick={() => void save()} disabled={saving}>
-            <Save className="h-4 w-4" />
-            Save
-          </Button>
-        </div>
-        <Label className="text-xs text-muted-foreground">
-          New keys are appended; existing comments are preserved.
-        </Label>
-      </CardContent>
-    </Card>
+            {rows.map((row, i) => (
+              <div key={i} className="grid grid-cols-[1fr_2fr] gap-2">
+                <Input
+                  value={row.key}
+                  placeholder="key"
+                  onChange={(e) => update(i, { key: e.target.value })}
+                />
+                <Input
+                  value={row.value}
+                  placeholder="value"
+                  onChange={(e) => update(i, { value: e.target.value })}
+                />
+              </div>
+            ))}
+
+            <div className="flex items-center gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRows((r) => [...r, { key: '', value: '' }])}
+              >
+                <Plus className="h-4 w-4" />
+                Add field
+              </Button>
+              <Button size="sm" onClick={() => void save()} disabled={saving}>
+                <Save className="h-4 w-4" />
+                Save
+              </Button>
+            </div>
+            <Label className="text-xs text-muted-foreground">
+              New keys are appended; existing comments are preserved.
+            </Label>
+          </CardContent>
+        </Card>
+      </PageScroll>
+    </Page>
   );
 }

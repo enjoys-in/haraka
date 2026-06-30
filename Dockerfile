@@ -60,13 +60,14 @@ COPY --from=server /server/node_modules ./admin/server/node_modules
 # Pre-built admin web UI (served by the API from admin/web/dist).
 COPY --from=web /web/dist ./admin/web/dist
 
-# Haraka config, custom plugins, plugin docs and the root manifest.
+# Haraka config, custom plugins and the root manifest.
 COPY config/ ./config/
+COPY inbound/ ./inbound/
+COPY outbound/ ./outbound/
 COPY plugins/ ./plugins/
-COPY docs/ ./docs/
 COPY package.json ./
 
-# Writable runtime directories Haraka expects to exist.
+# Writable runtime directories Haraka expects to exist (spool, queue, plugins, docs).
 RUN mkdir -p spool queue plugins docs
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh

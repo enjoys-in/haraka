@@ -1,33 +1,59 @@
 #!/usr/bin/env bash
-# Supervisor entrypoint: runs the Haraka SMTP server (Node) and the admin
-# config API (Bun) side by side, and stops the container if either exits.
+# Role-aware entrypoint. Select the role with HARAKA_ROLE:
+#   combined (default) — admin API + a single Haraka on 25+587 (config/)
+#   admin              — admin API/UI only (port 3001)
+#   inbound            — Haraka MTA on :25      (-c /app/inbound)
+#   outbound           — Haraka MSA on :587     (-c /app/outbound)
 set -euo pipefail
 
 HARAKA_ROOT="/app"
+ROLE="${HARAKA_ROLE:-combined}"
 
-echo "[entrypoint] starting admin API (bun) on ${HOST:-0.0.0.0}:${PORT:-3001}…"
-(
+run_admin() {
+  echo "[entrypoint] admin API on ${HOST:-0.0.0.0}:${PORT:-3001}"
   cd "${HARAKA_ROOT}/admin/server"
   exec bun run src/index.ts
-) &
-admin_pid=$!
-
-echo "[entrypoint] starting Haraka SMTP server (node)…"
-(
-  cd "${HARAKA_ROOT}"
-  exec node node_modules/Haraka/bin/haraka -c "${HARAKA_ROOT}"
-) &
-haraka_pid=$!
-
-shutdown() {
-  echo "[entrypoint] received signal, shutting down…"
-  kill -TERM "${admin_pid}" "${haraka_pid}" 2>/dev/null || true
-  wait
 }
-trap shutdown TERM INT
 
-# Exit as soon as either service stops, so the orchestrator can restart us.
-wait -n "${admin_pid}" "${haraka_pid}"
-echo "[entrypoint] a service exited; stopping container"
-shutdown
-exit 1
+run_haraka() {
+  local cfg="$1"
+  echo "[entrypoint] Haraka -c ${cfg}"
+  cd "${HARAKA_ROOT}"
+  exec node node_modules/Haraka/bin/haraka -c "${cfg}"
+}
+
+case "${ROLE}" in
+  admin)    run_admin ;;
+  inbound)  run_haraka "${HARAKA_ROOT}/inbound" ;;
+  outbound) run_haraka "${HARAKA_ROOT}/outbound" ;;
+  combined)
+    echo "[entrypoint] combined mode: admin API + single Haraka (config/)"
+    (
+      cd "${HARAKA_ROOT}/admin/server"
+      exec bun run src/index.ts
+    ) &
+    admin_pid=$!
+
+    (
+      cd "${HARAKA_ROOT}"
+      exec node node_modules/Haraka/bin/haraka -c "${HARAKA_ROOT}"
+    ) &
+    haraka_pid=$!
+
+    shutdown() {
+      echo "[entrypoint] received signal, shutting down…"
+      kill -TERM "${admin_pid}" "${haraka_pid}" 2>/dev/null || true
+      wait
+    }
+    trap shutdown TERM INT
+
+    wait -n "${admin_pid}" "${haraka_pid}"
+    echo "[entrypoint] a service exited; stopping container"
+    shutdown
+    exit 1
+    ;;
+  *)
+    echo "[entrypoint] unknown HARAKA_ROLE='${ROLE}' (use combined|admin|inbound|outbound)" >&2
+    exit 2
+    ;;
+esac

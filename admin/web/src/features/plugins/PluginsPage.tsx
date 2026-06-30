@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Page, PageScroll } from '@/components/page';
 
 const CATEGORY_ORDER = [
   'Core', 'Connection', 'HELO', 'TLS / Security', 'Authentication',
@@ -53,7 +54,7 @@ export function PluginsPage() {
   }, [data, query]);
 
   return (
-    <div className="space-y-4">
+    <Page>
       <Card>
         <CardHeader>
           <CardTitle>Plugins</CardTitle>
@@ -81,10 +82,11 @@ export function PluginsPage() {
         </CardContent>
       </Card>
 
-      {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      <PageScroll>
+        {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
-      {groups.map(([category, plugins]) => (
+        {groups.map(([category, plugins]) => (
         <Card key={category}>
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
@@ -105,7 +107,8 @@ export function PluginsPage() {
           </CardContent>
         </Card>
       ))}
-    </div>
+      </PageScroll>
+    </Page>
   );
 }
 

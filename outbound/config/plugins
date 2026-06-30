@@ -1,0 +1,20 @@
+# OUTBOUND instance — MSA (submission) on port 587.
+# Authenticated users only. TLS + AUTH are REQUIRED before mail is accepted.
+# Relayed mail is auto-delivered to remote MX by Haraka's native outbound.
+# No spam/AV scanning here — these are your own trusted users.
+
+status
+
+# TLS must be available before AUTH is advertised (see 'haraka -h tls')
+tls
+auth/flat_file
+
+# DATA — sanitize headers and SIGN outgoing mail with DKIM (config/dkim_sign.ini)
+headers
+dkim
+
+# Relaying clients have recipients auto-accepted (no rcpt_to plugin needed);
+# Haraka's native outbound queue delivers to each recipient's MX.
+
+# Optional (needs Redis): per-user rate / concurrency limits
+#limit

@@ -3,11 +3,17 @@ import type {
   StatusResponse,
   PluginInfo,
   PluginConfigFile,
+  CustomPlugin,
+  CustomPluginDetail,
+  PluginTemplate,
+  TlsStatus,
   AuthUser,
   SpamSettings,
   DkimDomain,
   DkimDetail,
   DkimVerifyResult,
+  SendMailInput,
+  SendMailResult,
 } from './types';
 
 const BASE = '/api';
@@ -43,12 +49,52 @@ export const api = {
       }),
   },
 
+  customPlugins: {
+    templates: () => request<{ templates: PluginTemplate[] }>('/custom-plugins/templates'),
+    list: () => request<{ plugins: CustomPlugin[] }>('/custom-plugins'),
+    get: (name: string) =>
+      request<{ plugin: CustomPluginDetail }>(`/custom-plugins/${encodeURIComponent(name)}`),
+    create: (name: string, template: string, enable: boolean) =>
+      request<{ plugin: CustomPluginDetail }>('/custom-plugins', {
+        method: 'POST',
+        body: JSON.stringify({ name, template, enable }),
+      }),
+    save: (name: string, content: string) =>
+      request<{ plugin: CustomPluginDetail }>(`/custom-plugins/${encodeURIComponent(name)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ content }),
+      }),
+    setEnabled: (name: string, enabled: boolean) =>
+      request<{ plugin: CustomPluginDetail }>(
+        `/custom-plugins/${encodeURIComponent(name)}/enabled`,
+        { method: 'POST', body: JSON.stringify({ enabled }) },
+      ),
+    remove: (name: string) =>
+      request<{ plugins: CustomPlugin[] }>(`/custom-plugins/${encodeURIComponent(name)}`, {
+        method: 'DELETE',
+      }),
+  },
+
   smtp: {
     get: () => request<{ values: Record<string, string> }>('/smtp'),
     set: (values: Record<string, string>) =>
       request<{ values: Record<string, string> }>('/smtp', {
         method: 'POST',
         body: JSON.stringify({ values }),
+      }),
+  },
+
+  tls: {
+    get: () => request<{ tls: TlsStatus }>('/tls'),
+    saveCert: (cert: string, key: string) =>
+      request<{ tls: TlsStatus }>('/tls/cert', {
+        method: 'POST',
+        body: JSON.stringify({ cert, key }),
+      }),
+    setEnabled: (enabled: boolean) =>
+      request<{ tls: TlsStatus }>('/tls/enabled', {
+        method: 'POST',
+        body: JSON.stringify({ enabled }),
       }),
   },
 
@@ -102,6 +148,14 @@ export const api = {
     remove: (domain: string) =>
       request<{ domains: DkimDomain[] }>(`/dkim/${encodeURIComponent(domain)}`, {
         method: 'DELETE',
+      }),
+  },
+
+  mail: {
+    send: (input: SendMailInput) =>
+      request<{ result: SendMailResult }>('/mail/send', {
+        method: 'POST',
+        body: JSON.stringify(input),
       }),
   },
 };

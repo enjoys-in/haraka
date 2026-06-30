@@ -5,8 +5,11 @@ import {
   Users,
   Server,
   Puzzle,
+  Code2,
   KeyRound,
   ShieldCheck,
+  Mail,
+  Lock,
   Moon,
   Sun,
   Menu,
@@ -32,6 +35,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Mail',
     items: [
+      { value: 'mail', label: 'Mail', icon: Mail },
       { value: 'domains', label: 'Domains', icon: Globe },
       { value: 'users', label: 'Users', icon: Users },
     ],
@@ -41,12 +45,16 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { value: 'smtp', label: 'SMTP', icon: Server },
       { value: 'plugins', label: 'Plugins', icon: Puzzle },
+      { value: 'custom-plugins', label: 'Custom Plugins', icon: Code2 },
       { value: 'dkim', label: 'DKIM', icon: KeyRound },
     ],
   },
   {
     label: 'Security',
-    items: [{ value: 'spam', label: 'Spam & AV', icon: ShieldCheck }],
+    items: [
+      { value: 'tls', label: 'TLS / SSL', icon: Lock },
+      { value: 'spam', label: 'Spam & AV', icon: ShieldCheck },
+    ],
   },
 ];
 
@@ -204,8 +212,10 @@ export function Layout({ active, onNavigate, children }: LayoutProps) {
           )}
         </header>
 
-        <main className="flex-1 overflow-auto">
-          <div className="animate-fade-in mx-auto max-w-7xl p-4 lg:p-6">{children}</div>
+        <main className="flex-1 overflow-hidden">
+          <div className="animate-fade-in mx-auto flex h-full max-w-7xl flex-col p-4 lg:p-6">
+            {children}
+          </div>
         </main>
       </div>
     </div>

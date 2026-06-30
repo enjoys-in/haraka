@@ -16,6 +16,7 @@ import { useAsyncData } from '@/lib/use-async';
 import type { ServiceStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Page, PageScroll } from '@/components/page';
 
 const ICONS: Record<string, LucideIcon> = {
   smtp_25: Server,
@@ -35,7 +36,7 @@ export function Dashboard() {
   const down = services.length - up;
 
   return (
-    <div className="space-y-6">
+    <Page className="gap-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
@@ -57,7 +58,8 @@ export function Dashboard() {
         </Button>
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      <PageScroll className="space-y-6">
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
@@ -91,7 +93,8 @@ export function Dashboard() {
           <ServiceCard key={s.key} service={s} />
         ))}
       </div>
-    </div>
+      </PageScroll>
+    </Page>
   );
 }
 

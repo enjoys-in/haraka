@@ -77,6 +77,10 @@ dkim
 # 'limit' (rate/concurrency) needs Redis at init (docker 'redis'); enable after Redis is up
 #limit
 
+# Real-time: publish each accepted INBOUND message to Redis (admin streams it over
+# WebSocket). Authenticated/relaying (outbound) mail is skipped by the plugin.
+inbound_notify
+
 # QUEUE
 # queues: discard  qmail-queue  quarantine  smtp_forward  smtp_proxy
 # Queue mail via smtp - see config/smtp_forward.ini for where your mail goes

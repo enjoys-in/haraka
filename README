@@ -1,22 +1,161 @@
-Haraka
+# Haraka Mail Server + Admin Console
 
-Congratulations on creating a new installation of Haraka.
+A self-hosted, production-oriented mail stack built on
+[Haraka](https://haraka.github.io/) (a high-performance SMTP server written in
+Node.js), bundled with a **TypeScript admin API** and a **React admin UI** so the
+whole server can be configured, monitored and operated from the browser instead of
+editing config files by hand.
 
-This directory contains two key directories for how Haraka will function:
+Default domain: **airsend.in** (everything is dynamic — the domain, accepted
+recipients, users, DKIM keys, TLS and plugins are all editable from the UI).
 
- - config
-           This directory contains configuration files for Haraka. The
-           directory contains the default configuration. You probably want
-           to modify some files in here, particularly `smtp.ini`.
- - plugins
-           This directory contains custom plugins which you write to run in
-           Haraka. The plugins which ship with Haraka are still available
-           to use.
- - docs/plugins
-           This directory contains documentation for your plugins.
+---
 
-Documentation for Haraka is available via `haraka -h <name> where the name
-is either the name of a plugin (without the .js extension) or the name of
-a core Haraka module, such as `Connection` or `Transaction`.
+## What's in the box
 
-To get documentation on writing a plugin type `haraka -h Plugins`.
+| Layer | Tech | Purpose |
+| ----- | ---- | ------- |
+| **MTA / MSA** | Haraka 3.3.x (Node 20) | Inbound mail on `:25`, authenticated submission on `:587` |
+| **Admin API** | Express + TypeScript (Bun/tsx), port `3001` | Reads/writes `config/*` preserving comments, sends mail, streams events |
+| **Admin UI** | Vite + React 18 + Tailwind + shadcn | Dashboard for status, domains, users, plugins, SMTP, DKIM, TLS, spam |
+| **Filtering** | SpamAssassin, Rspamd, ClamAV, Redis (Docker) | Spam scoring + virus scanning, reputation/rate-limit backing store |
+| **Live feed** | Custom `inbound_notify` plugin → Redis pub/sub → WebSocket | Real-time stream of accepted inbound mail to the UI |
+
+```
+┌────────────┐   :25    ┌─────────────┐  spam/AV  ┌────────────────────────┐
+│  Internet  │ ───────► │  Haraka IN  │ ────────► │ SpamAssassin / Rspamd  │
+└────────────┘          │  (MTA)      │           │ ClamAV / Redis (Docker)│
+                        └──────┬──────┘           └────────────────────────┘
+   clients :587 (AUTH)        │ publish inbound events (Redis)
+┌────────────┐         ┌──────▼──────┐   WebSocket   ┌──────────────────────┐
+│  MUA / app │ ──────► │ Haraka OUT  │               │  Admin API  :3001     │
+└────────────┘  DKIM   │  (MSA)      │ ◄──────────►  │  + React UI (dist)    │
+                       └─────────────┘   /api, /ws   └──────────────────────┘
+```
+
+---
+
+## Repository layout
+
+```
+config/        Active Haraka config (combined mode) — *.ini, host_list, dkim/
+inbound/       Config + plugins for the INBOUND role  (-c inbound)
+outbound/      Config + plugins for the OUTBOUND role (-c outbound)
+plugins/       Custom plugins (e.g. inbound_notify.js)
+admin/server/  TypeScript config API (domain-driven: src/domains/<feature>)
+admin/web/     React admin UI (src/features/<feature>)
+docker/        Service config (rspamd local.d, etc.)
+example/       Dependency-free SMTP send/sink scripts for end-to-end tests
+Dockerfile     One image, role-aware entrypoint (combined|admin|inbound|outbound)
+docker-compose.yml  Spam/AV stack + admin + haraka-in + haraka-out
+```
+
+---
+
+## Quick start (local)
+
+**1. Start the spam/AV/Redis stack** (published on `127.0.0.1`):
+
+```bash
+docker compose up -d spamassassin rspamd clamav redis
+```
+
+**2. Run Haraka** against the repo config (binds `0.0.0.0:25` and `:587`):
+
+```bash
+npm install
+node node_modules/Haraka/bin/haraka -c .
+```
+
+> The npm package is **`Haraka`** (capital H). The lowercase `haraka` package is a
+> dead placeholder — `package.json` depends on `Haraka`.
+
+**3. Start the admin API + UI:**
+
+```bash
+cd admin/server && npm install && npm run dev   # API on :3001
+cd admin/web    && npm install && npm run dev   # UI on :5173 (proxies /api → 3001)
+```
+
+Open <http://localhost:5173>. When everything is up, `/api/status` reports all six
+services healthy: SMTP `25`, submission `587`, SpamAssassin `783`, Rspamd `11333`,
+ClamAV `3310`, Redis `6379`.
+
+Test login (flat-file auth): `testuser@airsend.in` / `TestPass123!`
+
+---
+
+## Run with Docker
+
+A single image runs the whole stack; the role is selected with `HARAKA_ROLE`
+(`combined` · `admin` · `inbound` · `outbound`).
+
+```bash
+docker build -t haraka-mail .
+docker run --rm -p 25:25 -p 587:587 -p 3001:3001 haraka-mail   # combined
+```
+
+Or bring up the full split topology (Linux host networking for prod):
+
+```bash
+docker compose up -d
+```
+
+This starts SpamAssassin, Rspamd, ClamAV, Redis, plus `admin` (API/UI),
+`haraka-in` (MTA) and `haraka-out` (MSA).
+
+---
+
+## Admin API surface
+
+| Route | Manages |
+| ----- | ------- |
+| `GET /api/status` | Live health of SMTP + spam/AV services |
+| `/api/plugins` | Toggle plugins, edit per-plugin config (from a trusted catalog) |
+| `/api/smtp` | `smtp.ini` listeners and core settings |
+| `/api/auth/users` | Mailbox users (`auth_flat_file.ini`) |
+| `/api/domains` | Accepted recipient domains (`host_list`) |
+| `/api/spam` | SpamAssassin / Rspamd / ClamAV config |
+| `/api/dkim` | Generate / verify / delete DKIM keys per domain |
+| `/api/tls` | STARTTLS certificates and settings |
+| `/api/mail` | Send a test message; `GET /ws/inbound` streams accepted mail |
+
+The config editor only writes files derived from a **server-side catalog**, never
+from client-supplied paths, and domains are regex-validated before use (no path
+traversal).
+
+---
+
+## Configuration notes
+
+- **`config/connection.ini` is required** on Haraka 3.3.x — without it every
+  connection throws and clients hang waiting for the `220` greeting.
+- **`watch`, `karma`, `limit`** plugins need Redis at init; leave them off until
+  Redis is running or Haraka aborts startup.
+- Haraka 3.x renames: `dnsbl` → `dns-list`, `dkim_sign` → `dkim` (the `dkim`
+  plugin still reads `config/dkim_sign.ini`).
+- DKIM keys live in `config/dkim/<domain>/{private,public,selector,dns}`; generate
+  with `cd config/dkim && sh dkim_key_gen.sh <domain>` or from the DKIM page in the UI.
+- `config/smtp.ini` paths are relative to the working directory (`spool_dir=spool`).
+
+---
+
+## Documentation
+
+Haraka ships extensive docs. From the repo:
+
+```bash
+haraka -h Plugins          # how to write a plugin
+haraka -h <plugin-name>    # docs for a specific plugin (no .js extension)
+haraka -h Connection       # core module docs
+haraka -l                  # list available plugins
+haraka -o -c .             # show plugin/hook run order
+```
+
+See also the official site: <https://haraka.github.io/>.
+
+---
+
+## License
+
+MIT

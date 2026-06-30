@@ -68,33 +68,75 @@ services:
       start_period: 5s
     restart: unless-stopped
 
-  # Haraka SMTP server + admin API/UI, built from ./Dockerfile (Node + Bun).
-  # Uses host networking so the 127.0.0.1 references in config/*.ini and the
-  # admin status checks reach the spam/AV services published above.
-  # NOTE: network_mode: host works on Linux hosts (the production target).
-  #       On Docker Desktop, build the image and run it with explicit port
-  #       maps instead: docker run -p 25:25 -p 587:587 -p 3001:3001 haraka-mail
-  haraka:
+  # ---- Haraka, split into three role-based services (all share the image) ----
+  # Linux host networking lets the 127.0.0.1 references in config/*.ini and the
+  # admin status checks reach the spam/AV/redis services published above.
+  # On Docker Desktop, swap to bridge networking + explicit -p port maps and
+  # point the *.ini hosts at the service names instead of 127.0.0.1.
+
+  # Admin API + UI only (port 3001). Manages config, sends mail via :587,
+  # streams inbound events from Redis over WebSocket.
+  admin:
     build:
       context: .
       dockerfile: Dockerfile
     image: haraka-mail
-    container_name: haraka-mail
+    container_name: haraka-admin
     depends_on:
+      - redis
       - spamassassin
       - rspamd
       - clamav
-      - redis
     network_mode: host
     init: true
     environment:
-      # Admin API binds loopback only by default (reach it via SSH tunnel).
-      # Set HOST=0.0.0.0 to expose the admin UI on the host's interfaces.
-      HOST: 127.0.0.1
+      HARAKA_ROLE: admin
+      HOST: 0.0.0.0
       PORT: 3001
+      HARAKA_CONFIG_DIR: /app/config
+      REDIS_URL: redis://127.0.0.1:6379
+      SMTP_OUT_HOST: 127.0.0.1
+      SMTP_OUT_PORT: 587
     volumes:
-      # Persist config edits made through the admin UI and Haraka's spool/queue.
       - ./config:/app/config
+      - ./inbound:/app/inbound
+      - ./outbound:/app/outbound
+      - ./spool:/app/spool
+      - ./queue:/app/queue
+    restart: unless-stopped
+
+  # INBOUND MTA — port 25, anonymous, filters + local delivery, publishes to Redis.
+  haraka-in:
+    image: haraka-mail
+    container_name: haraka-in
+    depends_on:
+      - admin
+      - redis
+      - spamassassin
+      - rspamd
+      - clamav
+    network_mode: host
+    init: true
+    environment:
+      HARAKA_ROLE: inbound
+    volumes:
+      - ./inbound:/app/inbound
+      - ./spool:/app/spool
+      - ./queue:/app/queue
+    restart: unless-stopped
+
+  # OUTBOUND MSA — port 587, authenticated submission, DKIM sign, MX delivery.
+  haraka-out:
+    image: haraka-mail
+    container_name: haraka-out
+    depends_on:
+      - admin
+    network_mode: host
+    init: true
+    environment:
+      HARAKA_ROLE: outbound
+    volumes:
+      - ./outbound:/app/outbound
       - ./spool:/app/spool
       - ./queue:/app/queue
     restart: unless-stopped

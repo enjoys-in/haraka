@@ -1,0 +1,32 @@
+
+Add this TXT record to the airsend.in DNS zone.
+
+jun2026._domainkey    IN   TXT   v=DKIM1;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAo0z/Lbz7jrLk5weLvy51Y43tDdUZGL5sQsOkujimjj+WOD7+yQKRvhbDaeC/RXxcKVtXVeS8s8x9OHU9csWG+lwpwzFaBEIHQL5Y82cwCc27fv6Wj6SlH3eU7Nm+R8FnQxEGQtKYIhDbB0+46aKzToLljU8BLKxa/18593W5zCa1taFotmCcYUTwQyhqpwoX6wEBluiDxyNvIEimA+EU7Td3d36DonVVvrqUQMv3jR9EDKRrYTaiDfSS/ojnXFp4REQ5pa05vxKgLO07cX7PwfWqu7EoDtIPi+f5QevcsPzGURAUBOq4gp5QuhJKrutcX3due0hAB0UGda4SPslptQIDAQAB
+
+
+BIND zone file formatted:
+
+jun2026._domainkey    IN   TXT (
+	"v=DKIM1;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAo0z/Lbz7jrLk5weLvy51Y43tDdUZGL5sQsOkujimjj+WOD7+yQKRvhbD"
+	"aeC/RXxcKVtXVeS8s8x9OHU9csWG+lwpwzFaBEIHQL5Y82cwCc27fv6Wj6SlH3eU7Nm+R8FnQxEGQtKYIhDbB0+46aKzToLljU8BLKxa/18593"
+	"W5zCa1taFotmCcYUTwQyhqpwoX6wEBluiDxyNvIEimA+EU7Td3d36DonVVvrqUQMv3jR9EDKRrYTaiDfSS/ojnXFp4REQ5pa05vxKgLO07cX7P"
+	"wfWqu7EoDtIPi+f5QevcsPzGURAUBOq4gp5QuhJKrutcX3due0hAB0UGda4SPslptQIDAQAB"
+        )
+
+Tell the world that the ONLY mail servers that send mail from this domain are DKIM signed and/or bear our MX and A records.
+
+With SPF:
+
+        SPF "v=spf1 mx a -all"
+        TXT "v=spf1 mx a -all"
+
+With DMARC:
+
+_dmarc  TXT "v=DMARC1; p=reject; adkim=s; aspf=r; rua=mailto:dmarc-feedback@airsend.in; ruf=mailto:dmarc-feedback@airsend.in; pct=100"
+
+For more information about DKIM and SPF policy,
+the documentation within each plugin contains a longer discussion and links to more detailed information:
+
+   haraka -h dkim_sign
+   haraka -h spf
+

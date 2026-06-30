@@ -18,11 +18,11 @@ spool/*
 .env
 .env.*
 !.env.example
-config/internalcmd_key
-config/tls_key.pem
-config/tls_cert.pem
-config/dhparams.pem
-config/dkim/**/private
+**/internalcmd_key
+**/tls_key.pem
+**/tls_cert.pem
+**/dhparams.pem
+**/dkim/**/private
 
 # Editor / OS
 .DS_Store
