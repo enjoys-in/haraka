@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { useAsyncData } from '@/lib/use-async';
@@ -13,6 +13,7 @@ export function DomainsPage() {
   const { data, loading, error, setData } = useAsyncData(api.domains.list);
   const [domain, setDomain] = useState('');
   const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState('');
 
   async function add() {
     if (!domain.trim()) return;
@@ -37,6 +38,9 @@ export function DomainsPage() {
       toast.error(e instanceof Error ? e.message : 'Failed to remove domain');
     }
   }
+
+  const query = search.trim().toLowerCase();
+  const filtered = data?.domains.filter((d) => d.toLowerCase().includes(query)) ?? [];
 
   return (
     <Page>
@@ -69,6 +73,15 @@ export function DomainsPage() {
 
         <Card>
           <CardContent className="pt-6">
+            <div className="relative mb-4">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search domains…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -77,7 +90,7 @@ export function DomainsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data?.domains.map((d) => (
+                {filtered.map((d) => (
                   <TableRow key={d}>
                     <TableCell className="font-mono text-sm">{d}</TableCell>
                     <TableCell className="text-right">
@@ -87,10 +100,12 @@ export function DomainsPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {data && data.domains.length === 0 && (
+                {data && filtered.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={2} className="text-sm text-muted-foreground">
-                      No domains configured.
+                      {data.domains.length === 0
+                        ? 'No domains configured.'
+                        : `No domains match “${search.trim()}”.`}
                     </TableCell>
                   </TableRow>
                 )}

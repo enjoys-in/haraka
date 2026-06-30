@@ -32,10 +32,12 @@ interface DnsRecord {
 // Build the complete set of DNS records an operator needs to publish for a
 // domain, derived from the generated DKIM key. Names are shown relative to the
 // zone root (use "@" for the apex).
-function buildDnsRecords(detail: DkimDetail): DnsRecord[] {
+function buildDnsRecords(detail: DkimDetail, serverHost: string): DnsRecord[] {
   const domain = detail.dkim.domain;
   const selector = detail.dkim.selector;
-  const mailHost = `mail.${domain}`;
+  const mailHost = serverHost || `mail.${domain}`;
+  const inZone = mailHost === domain || mailHost.endsWith(`.${domain}`);
+  const aName = mailHost === domain ? '@' : inZone ? mailHost.slice(0, -(domain.length + 1)) : mailHost;
   const stsId = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
   return [
     {
@@ -45,15 +47,19 @@ function buildDnsRecords(detail: DkimDetail): DnsRecord[] {
       value: mailHost,
       priority: 10,
       required: true,
-      description: `Routes inbound mail for ${domain} to your server. Replace ${mailHost} with your server's hostname if it differs.`,
+      description: serverHost
+        ? `Routes inbound mail for ${domain} to ${mailHost} (this server's hostname, from Banner settings).`
+        : `Routes inbound mail for ${domain} to your server. Set the server hostname in Banner settings, or replace ${mailHost} if it differs.`,
     },
     {
       badge: 'A',
       type: 'A',
-      name: 'mail',
+      name: aName,
       value: '<your-server-IPv4>',
       required: true,
-      description: `Resolves ${mailHost} to your server's public IP. Add an AAAA record too if you have IPv6.`,
+      description: inZone
+        ? `Resolves ${mailHost} to your server's public IP. Add an AAAA record too if you have IPv6.`
+        : `${mailHost} is this server's hostname — publish its A record in that host's own zone, not under ${domain}.`,
     },
     {
       badge: 'SPF',
@@ -119,6 +125,8 @@ function recordsToZoneText(records: DnsRecord[]): string {
 
 export function DkimPage() {
   const { data, loading, error, reload, setData } = useAsyncData(api.dkim.list);
+  const { data: serverInfo } = useAsyncData(api.banner.get);
+  const serverHost = serverInfo?.banner.hostname.trim() ?? '';
   const [domain, setDomain] = useState('');
   const [selector, setSelector] = useState('');
   const [keySize, setKeySize] = useState(2048);
@@ -304,7 +312,7 @@ export function DkimPage() {
 
       {detail &&
         (() => {
-          const records = buildDnsRecords(detail);
+          const records = buildDnsRecords(detail, serverHost);
           const requiredCount = records.filter((r) => r.required).length;
           const recommendedCount = records.length - requiredCount;
           return (
