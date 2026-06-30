@@ -22,6 +22,7 @@ export interface PluginInfo {
 }
 
 const DOCS = (name: string) => `https://haraka.github.io/plugins/${name}`;
+const NPM = (pkg: string) => `https://www.npmjs.com/package/${pkg}`;
 
 export const PLUGIN_CATALOG: PluginInfo[] = [
   // ── Core ──────────────────────────────────────────────────────────────
@@ -164,6 +165,160 @@ export const PLUGIN_CATALOG: PluginInfo[] = [
   { name: 'watch', label: 'Watch', category: 'Monitoring',
     description: 'Live web UI to watch connections in real time (requires Redis).',
     configFile: '', docsUrl: DOCS('watch') },
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Remaining plugins from the official Haraka registry
+  //   https://haraka.github.io/plugins
+  // The admin API marks each as core / installed / local / missing. "missing"
+  // plugins must be installed (npm install haraka-plugin-<name>) before they
+  // can be enabled, otherwise Haraka fails to start.
+  // ──────────────────────────────────────────────────────────────────────
+
+  // ── Core ──────────────────────────────────────────────────────────────
+  { name: 'reseed_rng', label: 'Reseed RNG', category: 'Core',
+    description: 'Periodically reseeds the random number generator for better entropy.',
+    configFile: '', docsUrl: DOCS('reseed_rng') },
+  { name: 'xclient', label: 'XCLIENT', category: 'Core',
+    description: 'Lets trusted proxies pass the real client IP/identity via the XCLIENT command.',
+    configFile: '', docsUrl: DOCS('xclient') },
+  { name: 'redis', label: 'Redis', category: 'Core',
+    description: 'Shared Redis connection used by karma, limit, known-senders, watch and more.',
+    configFile: 'redis.ini', docsUrl: DOCS('redis') },
+  { name: 'record_envelope_addresses', label: 'Record Envelope Addresses', category: 'Core',
+    description: 'Adds headers recording the SMTP envelope sender and recipients.',
+    configFile: '', docsUrl: DOCS('record_envelope_addresses') },
+
+  // ── Connection ────────────────────────────────────────────────────────
+  { name: 'tarpit', label: 'Tarpit', category: 'Connection',
+    description: 'Slows down (delays responses to) abusive or suspicious connections.',
+    configFile: 'tarpit.ini', docsUrl: DOCS('tarpit') },
+  { name: 'delay_deny', label: 'Delay Deny', category: 'Connection',
+    description: 'Holds back early deny results until RCPT/DATA so spammers reveal more.',
+    configFile: '', docsUrl: DOCS('delay_deny') },
+  { name: 'greylist', label: 'Greylist', category: 'Connection',
+    description: 'Temporarily defers unknown senders; legitimate MTAs retry and pass (needs Redis).',
+    configFile: 'greylist.ini', docsUrl: DOCS('greylist') },
+  { name: 'known-senders', label: 'Known Senders', category: 'Connection',
+    description: 'Rewards correspondents you have previously sent mail to (needs Redis).',
+    configFile: 'known-senders.ini', docsUrl: DOCS('known-senders') },
+
+  // ── TLS / Security ────────────────────────────────────────────────────
+  { name: 'prevent_credential_leaks', label: 'Prevent Credential Leaks', category: 'TLS / Security',
+    description: 'Blocks users from accidentally emailing their own login credentials.',
+    configFile: '', docsUrl: DOCS('prevent_credential_leaks') },
+
+  // ── Authentication ────────────────────────────────────────────────────
+  { name: 'auth-enc-file', label: 'Auth: Encrypted File', category: 'Authentication',
+    description: 'SMTP AUTH against users stored in an encrypted credentials file.',
+    configFile: 'auth-enc-file.ini', docsUrl: DOCS('auth-enc-file') },
+  { name: 'auth/auth_bridge', label: 'Auth: Bridge', category: 'Authentication',
+    description: 'Bridges SMTP AUTH to a remote MTA.',
+    configFile: '', docsUrl: DOCS('auth/auth_bridge') },
+  { name: 'auth/auth_vpopmaild', label: 'Auth: vpopmaild', category: 'Authentication',
+    description: 'Authenticates SMTP users against a vpopmaild service.',
+    configFile: '', docsUrl: DOCS('auth/auth_vpopmaild') },
+  { name: 'auth-imap', label: 'Auth: IMAP', category: 'Authentication',
+    description: 'Authenticates SMTP users against an IMAP server.',
+    configFile: '', docsUrl: NPM('haraka-plugin-auth-imap') },
+  { name: 'dovecot', label: 'Dovecot', category: 'Authentication',
+    description: 'SMTP AUTH and recipient validation against a Dovecot server.',
+    configFile: 'dovecot.ini', docsUrl: DOCS('dovecot') },
+  { name: 'ldap', label: 'LDAP', category: 'Authentication',
+    description: 'Aliases, authentication and recipient validation from an LDAP directory.',
+    configFile: 'ldap.ini', docsUrl: DOCS('ldap') },
+  { name: 'mailauth', label: 'mailauth (SPF/DKIM/DMARC/ARC)', category: 'Authentication',
+    description: 'Unified email authentication: SPF, DKIM, DMARC, ARC and BIMI checks.',
+    configFile: 'mailauth.ini', docsUrl: DOCS('mailauth') },
+  { name: 'opendkim', label: 'OpenDKIM', category: 'Authentication',
+    description: 'Signs and verifies DKIM signatures using OpenDKIM.',
+    configFile: '', docsUrl: NPM('haraka-plugin-opendkim') },
+
+  // ── RCPT TO ───────────────────────────────────────────────────────────
+  { name: 'aliases', label: 'Aliases', category: 'RCPT TO',
+    description: 'Expands email aliases to one or more real recipient addresses.',
+    configFile: '', docsUrl: DOCS('aliases') },
+  { name: 'recipient-routes', label: 'Recipient Routes', category: 'RCPT TO',
+    description: 'Validates recipients and routes them to specific next-hop destinations.',
+    configFile: 'recipient-routes.ini', docsUrl: DOCS('recipient-routes') },
+  { name: 'rcpt-postgresql', label: 'RCPT via PostgreSQL', category: 'RCPT TO',
+    description: 'Validates recipient addresses against a PostgreSQL database.',
+    configFile: '', docsUrl: NPM('haraka-plugin-rcpt-postgresql') },
+
+  // ── Anti-Spam ─────────────────────────────────────────────────────────
+  { name: 'dcc', label: 'DCC', category: 'Anti-Spam',
+    description: 'Distributed Checksum Clearinghouse: detects bulk/spam mail by body checksum.',
+    configFile: 'dcc.ini', docsUrl: DOCS('dcc') },
+  { name: 'messagesniffer', label: 'MessageSniffer', category: 'Anti-Spam',
+    description: 'Anti-spam scanning via the commercial MessageSniffer engine.',
+    configFile: '', docsUrl: DOCS('messagesniffer') },
+  { name: 'block_me', label: 'Block Me', category: 'Anti-Spam',
+    description: 'Lets users grow a personal block list by forwarding unwanted mail.',
+    configFile: '', docsUrl: DOCS('block_me') },
+
+  // ── Anti-Virus ────────────────────────────────────────────────────────
+  { name: 'avg', label: 'AVG Antivirus', category: 'Anti-Virus',
+    description: 'Scans messages for viruses using the AVG antivirus scanner.',
+    configFile: '', docsUrl: DOCS('avg') },
+  { name: 'esets', label: 'ESET Mail Security', category: 'Anti-Virus',
+    description: 'Virus scanning via ESET Mail Security (esets).',
+    configFile: '', docsUrl: DOCS('esets') },
+  { name: 'milter', label: 'Milter', category: 'Anti-Virus',
+    description: 'Connects Haraka to milter filters (e.g. ClamAV, SpamAssassin, custom).',
+    configFile: '', docsUrl: DOCS('milter') },
+
+  // ── Queue / Delivery ──────────────────────────────────────────────────
+  { name: 'queue/smtp_bridge', label: 'Queue: SMTP Bridge', category: 'Queue / Delivery',
+    description: 'Bridges the SMTP session through to another MTA.',
+    configFile: '', docsUrl: DOCS('queue/smtp_bridge') },
+  { name: 'queue/lmtp', label: 'Queue: LMTP', category: 'Queue / Delivery',
+    description: 'Delivers queued messages to a local store via LMTP.',
+    configFile: '', docsUrl: DOCS('queue/lmtp') },
+  { name: 'queue/qmail-queue', label: 'Queue: qmail-queue', category: 'Queue / Delivery',
+    description: 'Hands accepted mail to a qmail queue process.',
+    configFile: '', docsUrl: DOCS('queue/qmail-queue') },
+  { name: 'wildduck', label: 'WildDuck', category: 'Queue / Delivery',
+    description: 'Queues messages to (and validates recipients against) a WildDuck mail store.',
+    configFile: '', docsUrl: DOCS('wildduck') },
+  { name: 'kafka', label: 'Kafka', category: 'Queue / Delivery',
+    description: 'Queues inbound mail onto an Apache Kafka topic.',
+    configFile: '', docsUrl: NPM('haraka-plugin-kafka') },
+  { name: 'rabbitmq', label: 'RabbitMQ', category: 'Queue / Delivery',
+    description: 'Queues messages to RabbitMQ.',
+    configFile: '', docsUrl: NPM('haraka-plugin-rabbitmq') },
+  { name: 'rabbitmq_amqplib', label: 'RabbitMQ (amqplib)', category: 'Queue / Delivery',
+    description: 'Queues messages to RabbitMQ using the amqplib client.',
+    configFile: '', docsUrl: NPM('haraka-plugin-rabbitmq_amqplib') },
+  { name: 'mongodb', label: 'MongoDB', category: 'Queue / Delivery',
+    description: 'Queues messages to a MongoDB collection.',
+    configFile: '', docsUrl: NPM('haraka-plugin-mongodb') },
+  { name: 'rails', label: 'Rails Action Mailbox', category: 'Queue / Delivery',
+    description: 'Delivers messages to a Rails app via Action Mailbox.',
+    configFile: '', docsUrl: NPM('haraka-plugin-rails') },
+  { name: 'save-sent', label: 'Save Sent', category: 'Queue / Delivery',
+    description: 'Saves a copy of sent mail to the senders mailbox on the server.',
+    configFile: '', docsUrl: DOCS('save-sent') },
+
+  // ── Outbound ──────────────────────────────────────────────────────────
+  { name: 'outbound-logger', label: 'Outbound Logger', category: 'Outbound',
+    description: 'JSON logging of outbound traffic with delivery and bounce metadata.',
+    configFile: '', docsUrl: DOCS('outbound-logger') },
+  { name: 'accounting_files', label: 'Accounting Files', category: 'Outbound',
+    description: 'Stores and archives custom accounting information about outbound traffic.',
+    configFile: '', docsUrl: NPM('haraka-plugin-accounting_files') },
+  { name: 'srs', label: 'SRS', category: 'Outbound',
+    description: 'Sender Rewriting Scheme so forwarded mail survives SPF checks.',
+    configFile: 'srs.ini', docsUrl: DOCS('srs') },
+  { name: 'batv-srs', label: 'BATV + SRS', category: 'Outbound',
+    description: 'Bounce Address Tag Validation combined with Sender Rewriting Scheme.',
+    configFile: '', docsUrl: DOCS('batv-srs') },
+  { name: 'vmta', label: 'Virtual MTA', category: 'Outbound',
+    description: 'Virtual MTA management for sending across multiple IPs or identities.',
+    configFile: '', docsUrl: NPM('haraka-plugin-vmta') },
+
+  // ── Monitoring ────────────────────────────────────────────────────────
+  { name: 'elasticsearch', label: 'Elasticsearch', category: 'Monitoring',
+    description: 'Stores per-message and per-connection metadata in Elasticsearch.',
+    configFile: 'elasticsearch.ini', docsUrl: DOCS('elasticsearch') },
 ];
 
 const BY_NAME = new Map(PLUGIN_CATALOG.map((p) => [p.name, p]));

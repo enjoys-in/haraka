@@ -9,6 +9,8 @@ editing config files by hand.
 Default domain: **airsend.in** (everything is dynamic — the domain, accepted
 recipients, users, DKIM keys, TLS and plugins are all editable from the UI).
 
+**Source:** <https://github.com/enjoys-in/haraka>
+
 ---
 
 ## What's in the box
@@ -153,6 +155,7 @@ haraka -o -c .             # show plugin/hook run order
 ```
 
 See also the official site: <https://haraka.github.io/>.
+Project source: <https://github.com/enjoys-in/haraka>.
 
 ---
 

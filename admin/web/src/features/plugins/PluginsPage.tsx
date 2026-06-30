@@ -15,7 +15,7 @@ import { Page, PageScroll } from '@/components/page';
 const CATEGORY_ORDER = [
   'Core', 'Connection', 'HELO', 'TLS / Security', 'Authentication',
   'MAIL FROM', 'RCPT TO', 'Data / Headers', 'Anti-Spam', 'Anti-Virus',
-  'Queue / Delivery', 'Monitoring', 'Other',
+  'Queue / Delivery', 'Outbound', 'Monitoring', 'Other',
 ];
 
 export function PluginsPage() {
@@ -53,12 +53,21 @@ export function PluginsPage() {
     );
   }, [data, query]);
 
+  const all = data?.plugins ?? [];
+  const enabledCount = all.filter((p) => p.enabled).length;
+  const readyCount = all.filter((p) => p.available).length;
+
   return (
     <Page>
       <Card>
         <CardHeader>
           <CardTitle>Plugins</CardTitle>
           <CardDescription>Toggle plugins on/off and edit each plugin's config file.</CardDescription>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <Badge variant="success" className="px-2 py-0 text-[11px]">{enabledCount} enabled</Badge>
+            <Badge variant="secondary" className="px-2 py-0 text-[11px]">{readyCount} ready to use</Badge>
+            <Badge variant="outline" className="px-2 py-0 text-[11px]">{all.length} available</Badge>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
@@ -125,14 +134,27 @@ function PluginRow({ plugin, busy, open, onToggle, onConfigure }: RowProps) {
     <div className="rounded-lg border border-transparent transition-colors hover:border-border/50 hover:bg-muted/40">
       <div className="flex items-center gap-3 px-3 py-2.5">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-medium">{plugin.label}</span>
             <code className="truncate text-[11px] text-muted-foreground">{plugin.name}</code>
             {plugin.enabled && (
               <Badge variant="success" className="px-1.5 py-0 text-[10px]">on</Badge>
             )}
+            {plugin.source === 'core' && (
+              <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">core</Badge>
+            )}
+            {!plugin.available && (
+              <Badge variant="outline" className="px-1.5 py-0 text-[10px] text-muted-foreground">
+                not installed
+              </Badge>
+            )}
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">{plugin.description}</p>
+          {!plugin.available && plugin.npmPackage && (
+            <code className="mt-1 inline-block rounded bg-muted px-1.5 py-0.5 text-[10px] text-foreground">
+              npm install {plugin.npmPackage}
+            </code>
+          )}
         </div>
         <a
           href={plugin.docsUrl}
@@ -143,7 +165,7 @@ function PluginRow({ plugin, busy, open, onToggle, onConfigure }: RowProps) {
         >
           <ExternalLink className="h-4 w-4" />
         </a>
-        {plugin.configFile && (
+        {plugin.available && plugin.configFile && (
           <Button
             variant={open ? 'secondary' : 'ghost'}
             size="sm"
@@ -155,9 +177,14 @@ function PluginRow({ plugin, busy, open, onToggle, onConfigure }: RowProps) {
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
           </Button>
         )}
-        <Switch checked={plugin.enabled} disabled={busy} onCheckedChange={onToggle} />
+        <Switch
+          checked={plugin.enabled}
+          disabled={busy || !plugin.available}
+          onCheckedChange={onToggle}
+          title={plugin.available ? undefined : 'Install this plugin before it can be enabled'}
+        />
       </div>
-      {open && plugin.configFile && <ConfigEditor plugin={plugin} />}
+      {open && plugin.available && plugin.configFile && <ConfigEditor plugin={plugin} />}
     </div>
   );
 }

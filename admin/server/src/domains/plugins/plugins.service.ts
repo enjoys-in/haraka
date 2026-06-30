@@ -1,7 +1,9 @@
 // Plugins domain: toggle entries in config/plugins (line-oriented list) and
 // read/write each plugin's own config file via the trusted catalog.
 import fs from 'node:fs';
+import path from 'node:path';
 import { readRaw, writeRaw, configPath } from '../../core/files';
+import { HARAKA_ROOT, PLUGINS_DIR } from '../../config';
 import { PLUGIN_CATALOG, getCatalogEntry, type PluginInfo } from './plugin-catalog';
 
 export interface PluginEntry {
@@ -9,10 +11,18 @@ export interface PluginEntry {
   enabled: boolean;
 }
 
+/** Where a plugin's code comes from (and whether it can be enabled at all). */
+export type PluginSource = 'core' | 'installed' | 'local' | 'missing';
+
 /** Catalog metadata + runtime state for the UI. */
 export interface PluginListItem extends PluginInfo {
   enabled: boolean;
   configExists: boolean;
+  source: PluginSource;
+  /** False only when the plugin code is absent (enabling it would break boot). */
+  available: boolean;
+  /** npm package providing the plugin, for an install hint when it is missing. */
+  npmPackage?: string;
 }
 
 export interface PluginConfigFile {
@@ -26,6 +36,28 @@ export interface PluginConfigFile {
 // newlines — so they can never inject extra lines into config/plugins.
 const SAFE_NAME = /^[a-zA-Z0-9._/-]+$/;
 const CATALOG_NAMES = new Set(PLUGIN_CATALOG.map((p) => p.name));
+
+// Where plugin code can live, in resolution order.
+const CORE_PLUGINS_DIR = path.join(HARAKA_ROOT, 'node_modules', 'Haraka', 'plugins');
+const NODE_MODULES = path.join(HARAKA_ROOT, 'node_modules');
+
+/** Conventional npm package for a plugin. Path-style core names (e.g.
+ *  "queue/smtp_forward") are never npm packages, so return undefined. */
+function npmPackageFor(name: string): string | undefined {
+  return name.includes('/') ? undefined : `haraka-plugin-${name}`;
+}
+
+/** Work out whether a plugin's code is present so the UI can show if it is
+ *  ready to enable. Order: local custom plugin -> Haraka core -> npm package. */
+export function resolveSource(name: string): { source: PluginSource; npmPackage?: string } {
+  if (fs.existsSync(path.join(PLUGINS_DIR, `${name}.js`))) return { source: 'local' };
+  if (fs.existsSync(path.join(CORE_PLUGINS_DIR, `${name}.js`))) return { source: 'core' };
+  const npmPackage = npmPackageFor(name);
+  if (npmPackage && fs.existsSync(path.join(NODE_MODULES, npmPackage))) {
+    return { source: 'installed', npmPackage };
+  }
+  return { source: 'missing', npmPackage };
+}
 
 // First token of a line, ignoring an optional leading '#'.
 function firstToken(line: string): string | null {
@@ -57,15 +89,22 @@ export function readPlugins(): PluginEntry[] {
 export function listPlugins(): PluginListItem[] {
   const enabledByName = new Map(readPlugins().map((p) => [p.name, p.enabled]));
 
-  const items: PluginListItem[] = PLUGIN_CATALOG.map((info) => ({
-    ...info,
-    enabled: enabledByName.get(info.name) ?? false,
-    configExists: info.configFile ? fs.existsSync(configPath(info.configFile)) : false,
-  }));
+  const items: PluginListItem[] = PLUGIN_CATALOG.map((info) => {
+    const { source, npmPackage } = resolveSource(info.name);
+    return {
+      ...info,
+      enabled: enabledByName.get(info.name) ?? false,
+      configExists: info.configFile ? fs.existsSync(configPath(info.configFile)) : false,
+      source,
+      available: source !== 'missing',
+      npmPackage,
+    };
+  });
 
   const known = new Set(PLUGIN_CATALOG.map((p) => p.name));
   for (const [name, enabled] of enabledByName) {
     if (known.has(name)) continue;
+    const { source, npmPackage } = resolveSource(name);
     items.push({
       name,
       label: name,
@@ -75,6 +114,9 @@ export function listPlugins(): PluginListItem[] {
       docsUrl: `https://haraka.github.io/plugins/${name}`,
       enabled,
       configExists: false,
+      source,
+      available: source !== 'missing',
+      npmPackage,
     });
   }
   return items;
@@ -84,6 +126,16 @@ export function setPlugin(name: string, enabled: boolean): PluginListItem[] {
   if (!SAFE_NAME.test(name)) throw new Error(`Invalid plugin name: ${name}`);
   const known = getCatalogEntry(name) || readPlugins().some((p) => p.name === name);
   if (!known) throw new Error(`Unknown plugin: ${name}`);
+
+  // Never enable a plugin whose code is not present - Haraka aborts at startup
+  // if config/plugins names a plugin it cannot load.
+  if (enabled) {
+    const { source, npmPackage } = resolveSource(name);
+    if (source === 'missing') {
+      const hint = npmPackage ? ` Install it first: npm install ${npmPackage}` : '';
+      throw new Error(`Plugin "${name}" is not installed.${hint}`);
+    }
+  }
 
   const lines = readRaw('plugins').split(/\r?\n/);
   let found = false;

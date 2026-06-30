@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   Zap,
+  Github,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -149,14 +150,25 @@ export function Layout({ active, onNavigate, children }: LayoutProps) {
             />
             <span className="text-[11px] font-medium text-muted-foreground/70">v1.0.0</span>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 rounded-lg px-0"
-            onClick={() => setDark((d) => !d)}
-          >
-            {dark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center gap-1">
+            <a
+              href="https://github.com/enjoys-in/haraka"
+              target="_blank"
+              rel="noreferrer"
+              title="View source on GitHub"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+            >
+              <Github className="h-4 w-4" />
+            </a>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 rounded-lg px-0"
+              onClick={() => setDark((d) => !d)}
+            >
+              {dark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
       </div>
     </>

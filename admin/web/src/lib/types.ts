@@ -24,6 +24,9 @@ export interface PluginInfo extends PluginEntry {
   configFile: string;
   docsUrl: string;
   configExists: boolean;
+  source: 'core' | 'installed' | 'local' | 'missing';
+  available: boolean;
+  npmPackage?: string;
 }
 
 export interface PluginConfigFile {
