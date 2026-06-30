@@ -1,4 +1,5 @@
 // Resolved paths and runtime settings for the admin API.
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -38,3 +39,30 @@ export const OUTBOUND_SMTP = {
   pass: process.env.SMTP_OUT_PASS || 'TestPass123!',
   secure: process.env.SMTP_OUT_SECURE === 'true',
 };
+
+// A queue spool the admin can read. In the scaled Docker topology each Haraka
+// worker keeps a PRIVATE queue volume; the admin mounts them all under a common
+// parent (HARAKA_QUEUE_ROOT) so it can aggregate every worker's spool. Each
+// immediate subdirectory is one worker's queue, keyed by the subdir name. When
+// no parent is configured, a single unkeyed root (HARAKA_QUEUE_DIR) is used.
+export interface QueueRoot {
+  key: string;
+  dir: string;
+}
+
+export function queueRoots(): QueueRoot[] {
+  const parent = process.env.HARAKA_QUEUE_ROOT;
+  if (parent) {
+    try {
+      const roots = fs
+        .readdirSync(parent, { withFileTypes: true })
+        .filter((e) => e.isDirectory())
+        .map((e) => ({ key: e.name, dir: path.join(parent, e.name) }))
+        .sort((a, b) => a.key.localeCompare(b.key));
+      if (roots.length > 0) return roots;
+    } catch {
+      // Parent missing/unreadable — fall back to the single-root layout.
+    }
+  }
+  return [{ key: '', dir: process.env.HARAKA_QUEUE_DIR || path.join(HARAKA_ROOT, 'queue') }];
+}

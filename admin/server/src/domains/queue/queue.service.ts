@@ -4,9 +4,7 @@
 //   name = arrival_nextAttempt_attempts_pid_uniq_counter_host
 import fs from 'node:fs';
 import path from 'node:path';
-import { HARAKA_ROOT } from '../../config';
-
-const QUEUE_DIR = process.env.HARAKA_QUEUE_DIR || path.join(HARAKA_ROOT, 'queue');
+import { queueRoots, type QueueRoot } from '../../config';
 
 export type QueueState = 'queued' | 'sending' | 'deferred' | 'frozen' | 'bounced';
 
@@ -78,8 +76,8 @@ function readTodo(filePath: string): { todo: Record<string, unknown>; subject: s
   }
 }
 
-function toMessage(name: string): QueuedMessage | null {
-  const filePath = path.join(QUEUE_DIR, name);
+function toMessage(dir: string, key: string, name: string): QueuedMessage | null {
+  const filePath = path.join(dir, name);
   let stat: fs.Stats;
   try {
     stat = fs.statSync(filePath);
@@ -102,7 +100,7 @@ function toMessage(name: string): QueuedMessage | null {
   }
 
   return {
-    id: name,
+    id: key ? `${key}/${name}` : name,
     from,
     to,
     subject,
@@ -116,17 +114,21 @@ function toMessage(name: string): QueuedMessage | null {
 }
 
 export function listQueue(): QueuedMessage[] {
-  let names: string[];
-  try {
-    names = fs.readdirSync(QUEUE_DIR);
-  } catch {
-    return [];
+  const messages: QueuedMessage[] = [];
+  for (const root of queueRoots()) {
+    let names: string[];
+    try {
+      names = fs.readdirSync(root.dir);
+    } catch {
+      continue;
+    }
+    for (const name of names) {
+      if (name.startsWith('.')) continue;
+      const msg = toMessage(root.dir, root.key, name);
+      if (msg) messages.push(msg);
+    }
   }
-  return names
-    .filter((n) => !n.startsWith('.'))
-    .map(toMessage)
-    .filter((m): m is QueuedMessage => m !== null)
-    .sort((a, b) => a.queuedAt - b.queuedAt);
+  return messages.sort((a, b) => a.queuedAt - b.queuedAt);
 }
 
 export function queueSummary(messages: QueuedMessage[]): QueueSummary {
@@ -155,31 +157,53 @@ export function readQueue(): QueueView {
 }
 
 // Queue filenames are a fixed set of `_`-joined fields ending in the dest host;
-// allow only those characters so an id can never escape QUEUE_DIR.
+// allow only those characters so an id can never escape its queue root. A
+// multi-root id is prefixed with the worker key: `<key>/<filename>`.
 const SAFE_QUEUE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
-function queueFilePath(id: string): string {
-  if (!SAFE_QUEUE_ID.test(id)) throw new Error('Invalid queue id');
-  const filePath = path.join(QUEUE_DIR, id);
-  if (path.dirname(filePath) !== path.resolve(QUEUE_DIR)) throw new Error('Invalid queue id');
+function splitId(id: string): { key: string; name: string } {
+  const slash = id.indexOf('/');
+  if (slash === -1) return { key: '', name: id };
+  return { key: id.slice(0, slash), name: id.slice(slash + 1) };
+}
+
+function rootFor(key: string): QueueRoot {
+  const root = queueRoots().find((r) => r.key === key);
+  if (!root) throw new Error('Invalid queue id');
+  return root;
+}
+
+interface ResolvedQueueFile {
+  filePath: string;
+  dir: string;
+  key: string;
+  name: string;
+}
+
+function queueFilePath(id: string): ResolvedQueueFile {
+  const { key, name } = splitId(id);
+  if (!SAFE_QUEUE_ID.test(name)) throw new Error('Invalid queue id');
+  const root = rootFor(key);
+  const filePath = path.join(root.dir, name);
+  if (path.dirname(filePath) !== path.resolve(root.dir)) throw new Error('Invalid queue id');
   const stat = fs.statSync(filePath);
   if (!stat.isFile()) throw new Error('Not a queue file');
-  return filePath;
+  return { filePath, dir: root.dir, key: root.key, name };
 }
 
 /** Reschedule a queued message for immediate delivery by rewriting the
  *  `nextAttempt` field (the 2nd `_`-segment) of its filename to now. */
 export function retryQueueItem(id: string): { id: string } {
-  const filePath = queueFilePath(id);
-  const parts = id.split('_');
+  const { filePath, dir, key, name } = queueFilePath(id);
+  const parts = name.split('_');
   if (parts.length < 3) throw new Error('Unrecognized queue filename');
   parts[1] = String(Date.now());
-  const newId = parts.join('_');
-  if (newId !== id) fs.renameSync(filePath, path.join(QUEUE_DIR, newId));
-  return { id: newId };
+  const newName = parts.join('_');
+  if (newName !== name) fs.renameSync(filePath, path.join(dir, newName));
+  return { id: key ? `${key}/${newName}` : newName };
 }
 
 /** Permanently delete a message from the outbound spool. */
 export function deleteQueueItem(id: string): void {
-  fs.unlinkSync(queueFilePath(id));
+  fs.unlinkSync(queueFilePath(id).filePath);
 }

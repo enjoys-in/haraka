@@ -110,6 +110,10 @@ services:
       STATUS_REDIS_HOST: redis
       STATUS_REDIS_PORT: 6379
       HARAKA_LOG_FILE: /app/logs/haraka.log
+      # Aggregate every worker's private queue spool: each worker volume is
+      # mounted under this parent so the admin can list/retry/delete/release
+      # across all of them (one subdir per worker, keyed by name).
+      HARAKA_QUEUE_ROOT: /app/queues
     ports:
       - "${ADMIN_PUBLIC_PORT:-3001}:3001"
     volumes:
@@ -117,6 +121,10 @@ services:
       - ./inbound:/app/inbound
       - ./outbound:/app/outbound
       - ./logs:/app/logs
+      - in1-queue:/app/queues/in-1
+      - in2-queue:/app/queues/in-2
+      - out1-queue:/app/queues/out-1
+      - out2-queue:/app/queues/out-2
 
   haraka-in-1:
     <<: *haraka-common
@@ -212,4 +220,9 @@ networks:
     driver: bridge
     ipam:
       config:
+        # Dynamic IPs are allocated from the upper half (.128-.254) so the
+        # static haproxy address (172.30.0.10) is never claimed by a worker
+        # that starts before it. haproxy must keep .10 — the workers trust it
+        # as the PROXY-protocol source (inbound/outbound connection.ini).
         - subnet: 172.30.0.0/24
+          ip_range: 172.30.0.128/25

@@ -3,11 +3,19 @@
 // / reason subfolders). Read-only: lists held messages parsed from their files.
 import fs from 'node:fs';
 import path from 'node:path';
-import { HARAKA_ROOT } from '../../config';
+import { queueRoots } from '../../config';
 import { sendRaw } from '../mail/mail.service';
 
-const QUARANTINE_DIR =
-  process.env.HARAKA_QUARANTINE_DIR || path.join(HARAKA_ROOT, 'queue', 'quarantine');
+// Each worker's quarantine lives under its queue root (<queueRoot>/quarantine).
+// In multi-root mode a message id is prefixed with the worker key.
+interface QuarantineRoot {
+  key: string;
+  dir: string;
+}
+
+function quarantineRoots(): QuarantineRoot[] {
+  return queueRoots().map((r) => ({ key: r.key, dir: path.join(r.dir, 'quarantine') }));
+}
 
 export type QuarantineReason = 'spam' | 'virus' | 'policy' | 'dmarc';
 
@@ -71,37 +79,54 @@ function headers(filePath: string): { from: string; to: string; subject: string 
 }
 
 export function listQuarantine(): QuarantinedMessage[] {
-  const files: string[] = [];
-  walk(QUARANTINE_DIR, files);
   const messages: QuarantinedMessage[] = [];
-  for (const filePath of files) {
-    let stat: fs.Stats;
-    try {
-      stat = fs.statSync(filePath);
-    } catch {
-      continue;
+  for (const root of quarantineRoots()) {
+    const files: string[] = [];
+    walk(root.dir, files);
+    for (const filePath of files) {
+      let stat: fs.Stats;
+      try {
+        stat = fs.statSync(filePath);
+      } catch {
+        continue;
+      }
+      const rel = path.relative(root.dir, filePath);
+      const h = headers(filePath);
+      messages.push({
+        id: root.key ? `${root.key}/${rel}` : rel,
+        from: h.from,
+        to: h.to,
+        subject: h.subject,
+        reason: reasonFrom(rel),
+        score: null,
+        size: stat.size,
+        quarantinedAt: stat.mtimeMs,
+      });
     }
-    const rel = path.relative(QUARANTINE_DIR, filePath);
-    const h = headers(filePath);
-    messages.push({
-      id: rel,
-      from: h.from,
-      to: h.to,
-      subject: h.subject,
-      reason: reasonFrom(rel),
-      score: null,
-      size: stat.size,
-      quarantinedAt: stat.mtimeMs,
-    });
   }
   return messages.sort((a, b) => b.quarantinedAt - a.quarantinedAt);
 }
 
-// An id is the path of the file RELATIVE to QUARANTINE_DIR; resolve it and
-// confirm it stays inside the quarantine root (no traversal).
+// An id is the file path RELATIVE to a worker's quarantine root, optionally
+// prefixed with `<key>/` to select the worker. Resolve it and confirm it stays
+// inside that root (no traversal).
+function splitQid(id: string): { key: string; rel: string } {
+  const slash = id.indexOf('/');
+  if (slash !== -1) {
+    const first = id.slice(0, slash);
+    if (queueRoots().some((r) => r.key === first)) {
+      return { key: first, rel: id.slice(slash + 1) };
+    }
+  }
+  return { key: '', rel: id };
+}
+
 function quarantineFilePath(id: string): string {
-  const root = path.resolve(QUARANTINE_DIR);
-  const filePath = path.resolve(root, id);
+  const { key, rel } = splitQid(id);
+  const base = quarantineRoots().find((r) => r.key === key);
+  if (!base) throw new Error('Invalid quarantine id');
+  const root = path.resolve(base.dir);
+  const filePath = path.resolve(root, rel);
   if (filePath !== root && !filePath.startsWith(root + path.sep)) {
     throw new Error('Invalid quarantine id');
   }
@@ -126,15 +151,16 @@ export async function releaseQuarantine(id: string): Promise<{ to: string[] }> {
   const split = raw.toString('utf8').search(/\r?\n\r?\n/);
   const block = split === -1 ? raw.toString('utf8') : raw.toString('utf8', 0, split);
 
-  const from = headerValue(block, 'from').match(EMAIL_RE)?.[0];
   const to = Array.from(
-    new Set(
-      `${headerValue(block, 'to')} ${headerValue(block, 'cc')}`.match(EMAIL_RE) ?? [],
-    ),
+    new Set(`${headerValue(block, 'to')} ${headerValue(block, 'cc')}`.match(EMAIL_RE) ?? []),
   );
   if (to.length === 0) throw new Error('Cannot determine a recipient to release this message');
 
-  await sendRaw({ from, to }, raw);
+  // Re-inject through the MSA. The envelope MAIL FROM defaults to the
+  // authenticated submission user — the worker rejects relay when the envelope
+  // domain differs from the AUTH domain. The original From: header stays in the
+  // raw message, so the recipient still sees the true sender.
+  await sendRaw({ to }, raw);
   fs.unlinkSync(filePath);
   return { to };
 }
