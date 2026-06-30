@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+admin/web/dist/
+admin/server/dist/
+
+# Haraka runtime artifacts
+*.log
+haraka.log
+queue/*
+!queue/.gitkeep
+spool/*
+!spool/.gitkeep
+
+# Secrets / generated keys (keep these out of version control)
+.env
+.env.*
+!.env.example
+config/internalcmd_key
+config/tls_key.pem
+config/tls_cert.pem
+config/dhparams.pem
+config/dkim/**/private
+
+# Editor / OS
+.DS_Store
+Thumbs.db

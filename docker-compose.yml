@@ -1,0 +1,104 @@
+# Spam/AV services for Haraka (run on the host, connect via 127.0.0.1).
+#
+#   docker compose up -d
+#   docker compose ps
+#   docker compose logs -f clamav     # first run downloads virus DBs (slow)
+#
+# Haraka connects to these through published localhost ports:
+#   spamassassin -> 127.0.0.1:783   (config/spamassassin.ini)
+#   rspamd       -> 127.0.0.1:11333 (config/rspamd.ini)
+#   clamav       -> 127.0.0.1:3310  (config/clamd.ini)
+#   redis        -> 127.0.0.1:6379  (karma/limit/watch plugins)
+#
+# Ports are bound to 127.0.0.1 only, so they are not exposed off-host.
+
+services:
+  spamassassin:
+    # axllent/spamassassin runs `spamd --allowed-ips 0.0.0.0/0` on 0.0.0.0:783
+    # via runit, and refreshes rules with sa-update on start. Do NOT override
+    # `command:` here — that would replace its init script and break startup.
+    image: axllent/spamassassin:latest
+    container_name: haraka-spamassassin
+    environment:
+      - DNS_CHECKS=false
+    ports:
+      - "127.0.0.1:783:783"
+    restart: unless-stopped
+
+  rspamd:
+    image: rspamd/rspamd:latest
+    container_name: haraka-rspamd
+    depends_on:
+      - redis
+    volumes:
+      - ./docker/rspamd/local.d:/etc/rspamd/local.d:ro
+    ports:
+      - "127.0.0.1:11333:11333" # normal scanning worker (used by Haraka)
+      - "127.0.0.1:11334:11334" # controller / web UI
+    restart: unless-stopped
+
+  clamav:
+    image: clamav/clamav:latest
+    container_name: haraka-clamav
+    ports:
+      - "127.0.0.1:3310:3310"
+    volumes:
+      - clamav-db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: haraka-redis
+    command: ["redis-server", "--save", "60", "1"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  # Haraka SMTP server + admin API/UI, built from ./Dockerfile (Node + Bun).
+  # Uses host networking so the 127.0.0.1 references in config/*.ini and the
+  # admin status checks reach the spam/AV services published above.
+  # NOTE: network_mode: host works on Linux hosts (the production target).
+  #       On Docker Desktop, build the image and run it with explicit port
+  #       maps instead: docker run -p 25:25 -p 587:587 -p 3001:3001 haraka-mail
+  haraka:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: haraka-mail
+    container_name: haraka-mail
+    depends_on:
+      - spamassassin
+      - rspamd
+      - clamav
+      - redis
+    network_mode: host
+    init: true
+    environment:
+      # Admin API binds loopback only by default (reach it via SSH tunnel).
+      # Set HOST=0.0.0.0 to expose the admin UI on the host's interfaces.
+      HOST: 127.0.0.1
+      PORT: 3001
+    volumes:
+      # Persist config edits made through the admin UI and Haraka's spool/queue.
+      - ./config:/app/config
+      - ./spool:/app/spool
+      - ./queue:/app/queue
+    restart: unless-stopped
+
+volumes:
+  clamav-db:
+  redis-data:

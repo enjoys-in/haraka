@@ -1,0 +1,22 @@
+{
+  "name": "haraka-example-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "TypeScript scripts to test the local Haraka SMTP server",
+  "type": "module",
+  "scripts": {
+    "auth": "tsx send-auth.ts",
+    "noauth": "tsx send-noauth.ts",
+    "sink": "tsx sink.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "nodemailer": "^9.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/nodemailer": "^6.4.17",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
