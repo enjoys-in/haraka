@@ -8,6 +8,7 @@ status
 # TLS must be available before AUTH is advertised (see 'haraka -h tls')
 tls
 auth/flat_file
+local_policy_guard
 
 # DATA — sanitize headers and SIGN outgoing mail with DKIM (config/dkim_sign.ini)
 headers
