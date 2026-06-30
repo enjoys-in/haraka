@@ -25,7 +25,7 @@ import { mailHistoryRouter } from './domains/mail-history/mailHistory.routes';
 import { settingsRouter } from './domains/settings/settings.routes';
 import { monitoringRouter } from './domains/monitoring/monitoring.routes';
 import { quarantineRouter } from './domains/quarantine/quarantine.routes';
-import { attachInboundWs } from './domains/mail/inbound-ws';
+import { attachMailEventWs } from './domains/mail/mail-events-ws';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -60,7 +60,7 @@ if (fs.existsSync(dist)) {
 }
 
 const server = http.createServer(app);
-attachInboundWs(server, '/ws/inbound');
+attachMailEventWs(server);
 
 server.listen(PORT, HOST, () => {
   console.log(`[haraka-admin] API on http://${HOST}:${PORT}`);

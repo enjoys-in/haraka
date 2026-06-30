@@ -101,7 +101,7 @@ function InboundCard() {
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
               <Inbox className="h-4 w-4 text-[#FFA724]" /> Live mail events
             </CardTitle>
-            <CardDescription>Streamed over one WebSocket channel with event type labels</CardDescription>
+            <CardDescription>Merged from the inbound, outbound and bounce sockets</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <span

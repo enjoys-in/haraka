@@ -62,3 +62,25 @@ export async function sendMail(input: SendMailInput): Promise<SendMailResult> {
     response: info.response || '',
   };
 }
+
+/** Re-inject a complete raw RFC822 message through the MSA with an explicit
+ *  envelope. Used to release a quarantined message back into delivery. */
+export async function sendRaw(
+  envelope: { from?: string; to: string[] },
+  raw: string | Buffer,
+): Promise<SendMailResult> {
+  if (!envelope.to.length) throw new Error('No recipients to release to');
+  const from = envelope.from?.trim() || OUTBOUND_SMTP.user;
+
+  const info = await getTransport().sendMail({
+    envelope: { from, to: envelope.to },
+    raw,
+  });
+
+  return {
+    messageId: info.messageId,
+    accepted: (info.accepted || []).map(addr),
+    rejected: (info.rejected || []).map(addr),
+    response: info.response || '',
+  };
+}

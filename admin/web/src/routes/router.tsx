@@ -44,6 +44,7 @@ const QuarantinePage = lazyNamed(
   () => import('@/features/quarantine/QuarantinePage'),
   'QuarantinePage',
 );
+const AccessPage = lazyNamed(() => import('@/features/access/AccessPage'), 'AccessPage');
 
 export const router = createBrowserRouter([
   {
@@ -78,6 +79,7 @@ export const router = createBrowserRouter([
           { path: PATHS.tls, element: <TlsPage /> },
           { path: PATHS.spam, element: <SpamPage /> },
           { path: PATHS.quarantine, element: <QuarantinePage /> },
+          { path: PATHS.access, element: <AccessPage /> },
           { path: '*', element: <Navigate to={PATHS.dashboard} replace /> },
         ],
       },

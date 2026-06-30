@@ -19,6 +19,7 @@ import {
   Route as RouteIcon,
   Settings as SettingsIcon,
   ShieldAlert,
+  ListFilter,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { PATHS } from './paths';
@@ -79,6 +80,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: PATHS.tls, label: 'TLS / SSL', icon: Lock },
       { to: PATHS.spam, label: 'Spam & AV', icon: ShieldCheck },
+      { to: PATHS.access, label: 'Access Control', icon: ListFilter },
       { to: PATHS.quarantine, label: 'Quarantine', icon: ShieldAlert },
     ],
   },

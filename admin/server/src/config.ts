@@ -15,9 +15,12 @@ export const PORT = Number(process.env.PORT || 3001);
 // Bind host: loopback by default; set HOST=0.0.0.0 to expose (e.g. in Docker).
 export const HOST = process.env.HOST || '127.0.0.1';
 
-// Redis channel used by inbound_notify/bounce_notify to publish mail events.
+// Redis channels the notify plugins publish to. Each mail-event class has its own
+// channel and is streamed over a dedicated WebSocket by the admin.
 export const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 export const INBOUND_CHANNEL = process.env.INBOUND_CHANNEL || 'haraka:inbound';
+export const OUTBOUND_CHANNEL = process.env.OUTBOUND_CHANNEL || 'haraka:outbound';
+export const BOUNCE_CHANNEL = process.env.BOUNCE_CHANNEL || 'haraka:bounce';
 export const OUTBOUND_LOG_DIR =
   process.env.OUTBOUND_LOG_DIR || path.join(HARAKA_ROOT, 'outbound', 'logs', 'outbound');
 

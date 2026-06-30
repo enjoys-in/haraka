@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { HARAKA_ROOT } from '../../config';
+import { sendRaw } from '../mail/mail.service';
 
 const QUARANTINE_DIR =
   process.env.HARAKA_QUARANTINE_DIR || path.join(HARAKA_ROOT, 'queue', 'quarantine');
@@ -94,4 +95,51 @@ export function listQuarantine(): QuarantinedMessage[] {
     });
   }
   return messages.sort((a, b) => b.quarantinedAt - a.quarantinedAt);
+}
+
+// An id is the path of the file RELATIVE to QUARANTINE_DIR; resolve it and
+// confirm it stays inside the quarantine root (no traversal).
+function quarantineFilePath(id: string): string {
+  const root = path.resolve(QUARANTINE_DIR);
+  const filePath = path.resolve(root, id);
+  if (filePath !== root && !filePath.startsWith(root + path.sep)) {
+    throw new Error('Invalid quarantine id');
+  }
+  const stat = fs.statSync(filePath);
+  if (!stat.isFile()) throw new Error('Not a quarantine file');
+  return filePath;
+}
+
+const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+
+function headerValue(block: string, name: string): string {
+  const re = new RegExp(`^${name}:\\s*(.*(?:\\r?\\n[ \\t].*)*)`, 'im');
+  const m = block.match(re);
+  return m ? m[1].replace(/\r?\n[ \t]+/g, ' ').trim() : '';
+}
+
+/** Re-inject a held message into delivery (via the MSA) and remove it from
+ *  quarantine. Envelope is derived from the message's From / To / Cc headers. */
+export async function releaseQuarantine(id: string): Promise<{ to: string[] }> {
+  const filePath = quarantineFilePath(id);
+  const raw = fs.readFileSync(filePath);
+  const split = raw.toString('utf8').search(/\r?\n\r?\n/);
+  const block = split === -1 ? raw.toString('utf8') : raw.toString('utf8', 0, split);
+
+  const from = headerValue(block, 'from').match(EMAIL_RE)?.[0];
+  const to = Array.from(
+    new Set(
+      `${headerValue(block, 'to')} ${headerValue(block, 'cc')}`.match(EMAIL_RE) ?? [],
+    ),
+  );
+  if (to.length === 0) throw new Error('Cannot determine a recipient to release this message');
+
+  await sendRaw({ from, to }, raw);
+  fs.unlinkSync(filePath);
+  return { to };
+}
+
+/** Permanently delete a held message without delivering it. */
+export function deleteQuarantine(id: string): void {
+  fs.unlinkSync(quarantineFilePath(id));
 }

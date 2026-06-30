@@ -1,0 +1,42 @@
+# Caddyfile — reverse proxy + automatic HTTPS for the Haraka admin console.
+#
+# The admin container publishes UI + API + the mail-event WebSockets
+# (/ws/inbound, /ws/outbound, /ws/bounce) on host port 3001. Caddy fronts it
+# with TLS and upgrades the WebSocket connections transparently (no extra
+# directives needed for ws -> wss).
+#
+# Run on the host (Caddy is NOT part of the docker stack):
+#   caddy run   --config /home/ubuntu/haraka/Caddyfile
+#   caddy reload --config /home/ubuntu/haraka/Caddyfile
+#
+# Change the site address below to your real admin hostname (must have a DNS
+# A record -> 18.119.59.156 so Caddy can issue a Let's Encrypt cert).
+
+admin.airsend.in {
+	encode zstd gzip
+
+	# Optional but recommended — the streams carry full raw email bodies.
+	# Generate a hash with:  caddy hash-password
+	# basic_auth {
+	# 	admin <bcrypt-hash>
+	# }
+
+	# Mail-event WebSockets (/ws/inbound, /ws/outbound, /ws/bounce).
+	# Caddy upgrades ws connections automatically; this matcher just makes the
+	# routing explicit and keeps the sockets unbuffered.
+	@websockets {
+		path /ws/*
+		header Connection *Upgrade*
+		header Upgrade websocket
+	}
+	reverse_proxy @websockets 127.0.0.1:3001 {
+		flush_interval -1
+	}
+
+	# UI (SPA) + REST API + SSE system-log stream.
+	reverse_proxy 127.0.0.1:3001 {
+		# Don't buffer streaming responses: keeps the SSE system-log feed
+		# (/api/logs/system/stream) flowing in real time.
+		flush_interval -1
+	}
+}

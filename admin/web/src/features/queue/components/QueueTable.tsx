@@ -12,7 +12,20 @@ import type { QueuedMessage } from '../queue.types';
 import { QueueRow } from './QueueRow';
 
 /** Table of outbound queue messages. */
-export function QueueTable({ messages, loading }: { messages: QueuedMessage[]; loading?: boolean }) {
+export function QueueTable({
+  messages,
+  loading,
+  onRetry,
+  onRemove,
+  busyId,
+}: {
+  messages: QueuedMessage[];
+  loading?: boolean;
+  onRetry?: (id: string) => void;
+  onRemove?: (id: string) => void;
+  busyId?: string | null;
+}) {
+  const showActions = Boolean(onRetry || onRemove);
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0 p-4">
@@ -40,11 +53,18 @@ export function QueueTable({ messages, loading }: { messages: QueuedMessage[]; l
                 <TableHead className="text-center">Tries</TableHead>
                 <TableHead className="text-right">Size</TableHead>
                 <TableHead className="text-right">Next try</TableHead>
+                {showActions && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {messages.map((message) => (
-                <QueueRow key={message.id} message={message} />
+                <QueueRow
+                  key={message.id}
+                  message={message}
+                  onRetry={onRetry}
+                  onRemove={onRemove}
+                  busy={busyId === message.id}
+                />
               ))}
             </TableBody>
           </Table>

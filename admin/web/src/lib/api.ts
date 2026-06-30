@@ -234,6 +234,10 @@ export const api = {
 
   queue: {
     get: () => request<QueueView>('/queue'),
+    retry: (id: string) =>
+      request<QueueView>('/queue/retry', { method: 'POST', body: JSON.stringify({ id }) }),
+    remove: (id: string) =>
+      request<QueueView>('/queue/remove', { method: 'POST', body: JSON.stringify({ id }) }),
   },
 
   mailHistory: {
@@ -251,6 +255,16 @@ export const api = {
 
   quarantine: {
     list: () => request<{ messages: QuarantinedMessage[] }>('/quarantine'),
+    release: (id: string) =>
+      request<{ messages: QuarantinedMessage[] }>('/quarantine/release', {
+        method: 'POST',
+        body: JSON.stringify({ id }),
+      }),
+    remove: (id: string) =>
+      request<{ messages: QuarantinedMessage[] }>('/quarantine/remove', {
+        method: 'POST',
+        body: JSON.stringify({ id }),
+      }),
   },
 
   monitoring: {

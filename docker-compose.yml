@@ -66,6 +66,18 @@ services:
       mailnet: {}
     restart: unless-stopped
 
+  # Local dev mailbox sink: inbound mail for local domains is forwarded here.
+  # SMTP on :1025 (internal), web UI on :8025 (browse delivered mail).
+  mailpit:
+    image: axllent/mailpit:latest
+    environment:
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    ports:
+      - "${MAILPIT_WEB_PORT:-8025}:8025"
+    networks:
+      mailnet: {}
+    restart: unless-stopped
+
   admin:
     build:
       context: .

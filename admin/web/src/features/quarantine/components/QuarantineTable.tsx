@@ -15,10 +15,17 @@ import { QuarantineRow } from './QuarantineRow';
 export function QuarantineTable({
   messages,
   loading,
+  onRelease,
+  onRemove,
+  busyId,
 }: {
   messages: QuarantinedMessage[];
   loading?: boolean;
+  onRelease?: (id: string) => void;
+  onRemove?: (id: string) => void;
+  busyId?: string | null;
 }) {
+  const showActions = Boolean(onRelease || onRemove);
   return (
     <Card>
       <CardContent className="p-0">
@@ -39,11 +46,18 @@ export function QuarantineTable({
                 <TableHead className="text-center">Score</TableHead>
                 <TableHead className="text-right">Size</TableHead>
                 <TableHead className="text-right">When</TableHead>
+                {showActions && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {messages.map((message) => (
-                <QuarantineRow key={message.id} message={message} />
+                <QuarantineRow
+                  key={message.id}
+                  message={message}
+                  onRelease={onRelease}
+                  onRemove={onRemove}
+                  busy={busyId === message.id}
+                />
               ))}
             </TableBody>
           </Table>

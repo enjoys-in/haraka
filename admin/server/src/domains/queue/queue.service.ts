@@ -153,3 +153,33 @@ export function readQueue(): QueueView {
   const messages = listQueue();
   return { summary: queueSummary(messages), messages };
 }
+
+// Queue filenames are a fixed set of `_`-joined fields ending in the dest host;
+// allow only those characters so an id can never escape QUEUE_DIR.
+const SAFE_QUEUE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+function queueFilePath(id: string): string {
+  if (!SAFE_QUEUE_ID.test(id)) throw new Error('Invalid queue id');
+  const filePath = path.join(QUEUE_DIR, id);
+  if (path.dirname(filePath) !== path.resolve(QUEUE_DIR)) throw new Error('Invalid queue id');
+  const stat = fs.statSync(filePath);
+  if (!stat.isFile()) throw new Error('Not a queue file');
+  return filePath;
+}
+
+/** Reschedule a queued message for immediate delivery by rewriting the
+ *  `nextAttempt` field (the 2nd `_`-segment) of its filename to now. */
+export function retryQueueItem(id: string): { id: string } {
+  const filePath = queueFilePath(id);
+  const parts = id.split('_');
+  if (parts.length < 3) throw new Error('Unrecognized queue filename');
+  parts[1] = String(Date.now());
+  const newId = parts.join('_');
+  if (newId !== id) fs.renameSync(filePath, path.join(QUEUE_DIR, newId));
+  return { id: newId };
+}
+
+/** Permanently delete a message from the outbound spool. */
+export function deleteQueueItem(id: string): void {
+  fs.unlinkSync(queueFilePath(id));
+}

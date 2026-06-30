@@ -1,12 +1,14 @@
 'use strict'
 // inbound_notify — publishes a compact JSON event to Redis for accepted mail.
-// Event type is `inbound` for normal inbound SMTP and `outbound` for authenticated
-// relaying/submission, so the admin UI can consume one WebSocket stream.
+// Event type is `inbound` for normal inbound SMTP (channel haraka:inbound) and
+// `outbound` for authenticated relaying/submission (channel haraka:outbound); the
+// admin streams each over its own WebSocket (/ws/inbound, /ws/outbound).
 //
 // Config: config/inbound_notify.ini
 //   [main]
 //   url=redis://127.0.0.1:6379
 //   channel=haraka:inbound
+//   outbound_channel=haraka:outbound
 //
 // Event payload includes `raw`: the full unparsed email (headers + body).
 
@@ -15,12 +17,15 @@ const { createClient } = require('redis')
 exports.register = function () {
   this.load_cfg()
   this.register_hook('queue', 'notify')
+  // Relayed/outbound mail is queued via queue_outbound, not queue.
+  this.register_hook('queue_outbound', 'notify')
 }
 
 exports.load_cfg = function () {
   const cfg = this.config.get('inbound_notify.ini', () => this.load_cfg())
   this.redis_url = cfg.main?.url || 'redis://127.0.0.1:6379'
   this.channel = cfg.main?.channel || 'haraka:inbound'
+  this.outbound_channel = cfg.main?.outbound_channel || 'haraka:outbound'
 }
 
 exports.init_redis = async function () {
@@ -48,6 +53,7 @@ exports.notify = function (next, connection) {
   if (!txn) return next()
 
   const event_type = connection.relaying ? 'outbound' : 'inbound'
+  const channel = event_type === 'outbound' ? this.outbound_channel : this.channel
 
   const publish = (raw) => {
     try {
@@ -66,7 +72,7 @@ exports.notify = function (next, connection) {
         raw: raw || '',
       }
       if (this.client?.isReady) {
-        this.client.publish(this.channel, JSON.stringify(evt)).catch((e) => {
+        this.client.publish(channel, JSON.stringify(evt)).catch((e) => {
           this.logerror(`publish failed: ${e.message}`)
         })
       }

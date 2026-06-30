@@ -21,4 +21,5 @@ export const PATHS = {
   tls: '/tls',
   spam: '/spam',
   quarantine: '/quarantine',
+  access: '/access',
 } as const;

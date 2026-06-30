@@ -1,11 +1,11 @@
 'use strict'
-// bounce_notify — publishes bounce events to Redis so the admin UI can display
-// outbound failures on the same WebSocket stream used for inbound/outbound mail.
+// bounce_notify — publishes bounce events to the haraka:bounce Redis channel so
+// the admin can stream outbound delivery failures over its own /ws/bounce socket.
 //
 // Config: config/inbound_notify.ini
 //   [main]
 //   url=redis://127.0.0.1:6379
-//   channel=haraka:inbound
+//   bounce_channel=haraka:bounce
 
 const { createClient } = require('redis')
 
@@ -17,7 +17,7 @@ exports.register = function () {
 exports.load_cfg = function () {
   const cfg = this.config.get('inbound_notify.ini', () => this.load_cfg())
   this.redis_url = cfg.main?.url || 'redis://127.0.0.1:6379'
-  this.channel = cfg.main?.channel || 'haraka:inbound'
+  this.channel = cfg.main?.bounce_channel || 'haraka:bounce'
 }
 
 exports.init_redis = async function () {
