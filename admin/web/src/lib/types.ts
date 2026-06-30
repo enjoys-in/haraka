@@ -58,6 +58,23 @@ export interface PluginTemplate {
   code: string;
 }
 
+/** SMTP phase a rule applies to (matches the access plugin's PRECISE lists). */
+export type AccessScope = 'connect' | 'mail' | 'rcpt';
+export type AccessAction = 'allow' | 'deny';
+
+export interface AccessRule {
+  id: string;
+  scope: AccessScope;
+  action: AccessAction;
+  pattern: string;
+}
+
+export interface AccessAcl {
+  /** Whether the access plugin is currently enabled in config/plugins. */
+  enabled: boolean;
+  rules: AccessRule[];
+}
+
 export interface CertInfo {
   subject: string;
   issuer: string;

@@ -78,7 +78,11 @@ export function PluginRow({ plugin, busy, open, onToggle, onConfigure }: PluginR
       {open &&
         plugin.available &&
         plugin.configFile &&
-        (plugin.name === 'access' ? <AccessConfigPanel /> : <ConfigEditor plugin={plugin} />)}
+        (plugin.name === 'access' ? (
+          <AccessConfigPanel enabled={plugin.enabled} />
+        ) : (
+          <ConfigEditor plugin={plugin} />
+        ))}
     </div>
   );
 }

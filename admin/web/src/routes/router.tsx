@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
+import { RouteError } from './RouteError';
 import { lazyNamed } from './lazy';
 import { PATHS } from './paths';
 
@@ -31,23 +32,32 @@ const SpamPage = lazyNamed(() => import('@/features/spam/SpamPage'), 'SpamPage')
 export const router = createBrowserRouter([
   {
     element: <Layout />,
+    // Full-page fallback if the Layout shell itself fails to render.
+    errorElement: <RouteError />,
     children: [
-      { index: true, element: <Navigate to={PATHS.dashboard} replace /> },
-      { path: PATHS.dashboard, element: <Dashboard /> },
-      { path: PATHS.logs, element: <LogsPage /> },
-      { path: PATHS.mail, element: <MailPage /> },
-      { path: PATHS.domains, element: <DomainsPage /> },
-      { path: PATHS.users, element: <UsersPage /> },
-      { path: PATHS.smtp, element: <SmtpPage /> },
-      { path: PATHS.banner, element: <BannerPage /> },
-      { path: PATHS.dkim, element: <DkimPage /> },
-      { path: '/plugins', element: <Navigate to={PATHS.inboundPlugins} replace /> },
-      { path: PATHS.inboundPlugins, element: <InboundPluginsPage /> },
-      { path: PATHS.outboundPlugins, element: <OutboundPluginsPage /> },
-      { path: PATHS.customPlugins, element: <CustomPluginsPage /> },
-      { path: PATHS.tls, element: <TlsPage /> },
-      { path: PATHS.spam, element: <SpamPage /> },
-      { path: '*', element: <Navigate to={PATHS.dashboard} replace /> },
+      {
+        // Page/lazy-chunk errors are caught here so the error panel renders
+        // inside the app shell (sidebar stays visible).
+        errorElement: <RouteError />,
+        children: [
+          { index: true, element: <Navigate to={PATHS.dashboard} replace /> },
+          { path: PATHS.dashboard, element: <Dashboard /> },
+          { path: PATHS.logs, element: <LogsPage /> },
+          { path: PATHS.mail, element: <MailPage /> },
+          { path: PATHS.domains, element: <DomainsPage /> },
+          { path: PATHS.users, element: <UsersPage /> },
+          { path: PATHS.smtp, element: <SmtpPage /> },
+          { path: PATHS.banner, element: <BannerPage /> },
+          { path: PATHS.dkim, element: <DkimPage /> },
+          { path: '/plugins', element: <Navigate to={PATHS.inboundPlugins} replace /> },
+          { path: PATHS.inboundPlugins, element: <InboundPluginsPage /> },
+          { path: PATHS.outboundPlugins, element: <OutboundPluginsPage /> },
+          { path: PATHS.customPlugins, element: <CustomPluginsPage /> },
+          { path: PATHS.tls, element: <TlsPage /> },
+          { path: PATHS.spam, element: <SpamPage /> },
+          { path: '*', element: <Navigate to={PATHS.dashboard} replace /> },
+        ],
+      },
     ],
   },
 ]);

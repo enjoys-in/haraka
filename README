@@ -19,7 +19,7 @@ recipients, users, DKIM keys, TLS and plugins are all editable from the UI).
 | ----- | ---- | ------- |
 | **MTA / MSA** | Haraka 3.3.x (Node 20) | Inbound mail on `:25`, authenticated submission on `:587` |
 | **Admin API** | Express + TypeScript (Bun/tsx), port `3001` | Reads/writes `config/*` preserving comments, sends mail, streams events |
-| **Admin UI** | Vite + React 18 + Tailwind + shadcn | Dashboard for status, domains, users, plugins, SMTP, DKIM, TLS, spam |
+| **Admin UI** | Vite + React 18 + Tailwind + shadcn (react-router SPA) | Code-split pages for dashboard, logs, mail, domains, users, SMTP, banner, DKIM, TLS, spam and inbound/outbound/custom plugins — lazy-loaded with a custom error boundary |
 | **Filtering** | SpamAssassin, Rspamd, ClamAV, Redis (Docker) | Spam scoring + virus scanning, reputation/rate-limit backing store |
 | **Live feed** | Custom `inbound_notify` + `bounce_notify` plugins → Redis pub/sub → WebSocket | Real-time stream of `inbound`, `outbound`, and `bounce` events in one socket |
 
@@ -113,10 +113,12 @@ This starts SpamAssassin, Rspamd, ClamAV, Redis, plus `admin` (API/UI),
 | Route | Manages |
 | ----- | ------- |
 | `GET /api/status` | Live health of SMTP + spam/AV services |
-| `/api/plugins` | Toggle plugins, edit per-plugin config (from a trusted catalog) |
+| `/api/plugins` | Toggle plugins, edit per-plugin config (from a trusted catalog); each plugin is tagged `inbound`/`outbound`/`both` |
+| `/api/plugins/access/rules` | Manage `access` plugin ACLs (allow/deny by recipient, host, etc.) |
 | `/api/smtp` | `smtp.ini` listeners and core settings |
 | `/api/auth/users` | Mailbox users + aliases (`auth_flat_file.ini`, `aliases`) |
 | `/api/domains` | Accepted recipient domains (`host_list`) |
+| `/api/banner` | Connection banner shown on the SMTP greeting |
 | `/api/spam` | SpamAssassin / Rspamd / ClamAV config |
 | `/api/dkim` | Generate / verify / delete DKIM keys per domain |
 | `/api/tls` | STARTTLS certificates and settings |

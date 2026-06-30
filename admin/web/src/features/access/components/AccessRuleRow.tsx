@@ -2,18 +2,22 @@ import { ShieldCheck, ShieldBan, Trash2 } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatNumber } from '@/lib/format';
 import type { AccessRule } from '../access.types';
 
 const SCOPE_LABELS: Record<AccessRule['scope'], string> = {
   connect: 'Connect',
-  helo: 'HELO',
   mail: 'MAIL FROM',
   rcpt: 'RCPT TO',
 };
 
+interface AccessRuleRowProps {
+  rule: AccessRule;
+  onRemove?: (rule: AccessRule) => void;
+  busy?: boolean;
+}
+
 /** One access-control rule row. */
-export function AccessRuleRow({ rule }: { rule: AccessRule }) {
+export function AccessRuleRow({ rule, onRemove, busy }: AccessRuleRowProps) {
   const allow = rule.action === 'allow';
   return (
     <TableRow>
@@ -35,16 +39,14 @@ export function AccessRuleRow({ rule }: { rule: AccessRule }) {
         </Badge>
       </TableCell>
       <TableCell className="font-mono text-xs">{rule.pattern}</TableCell>
-      <TableCell className="max-w-[14rem] truncate text-xs text-muted-foreground/70" title={rule.comment ?? ''}>
-        {rule.comment ?? '—'}
-      </TableCell>
-      <TableCell className="text-right font-mono text-xs">{formatNumber(rule.hits)}</TableCell>
       <TableCell className="text-right">
         <Button
           variant="ghost"
           size="icon"
           className="h-7 w-7 text-destructive hover:text-destructive"
           title="Remove rule"
+          disabled={!onRemove || busy}
+          onClick={() => onRemove?.(rule)}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>

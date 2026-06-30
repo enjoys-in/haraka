@@ -11,8 +11,14 @@ import { EmptyState } from '@/components/empty-state';
 import type { AccessRule } from '../access.types';
 import { AccessRuleRow } from './AccessRuleRow';
 
+interface AccessRuleTableProps {
+  rules: AccessRule[];
+  onRemove?: (rule: AccessRule) => void;
+  busy?: boolean;
+}
+
 /** Table of access-control (allow/deny) rules. */
-export function AccessRuleTable({ rules }: { rules: AccessRule[] }) {
+export function AccessRuleTable({ rules, onRemove, busy }: AccessRuleTableProps) {
   return (
     <Card>
       <CardContent className="p-0">
@@ -29,14 +35,12 @@ export function AccessRuleTable({ rules }: { rules: AccessRule[] }) {
                 <TableHead>Action</TableHead>
                 <TableHead>Scope</TableHead>
                 <TableHead>Pattern</TableHead>
-                <TableHead>Comment</TableHead>
-                <TableHead className="text-right">Hits</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rules.map((rule) => (
-                <AccessRuleRow key={rule.id} rule={rule} />
+                <AccessRuleRow key={rule.id} rule={rule} onRemove={onRemove} busy={busy} />
               ))}
             </TableBody>
           </Table>

@@ -5,6 +5,9 @@ import {
   setPlugin,
   readPluginConfig,
   writePluginConfig,
+  readAccessRules,
+  addAccessRule,
+  removeAccessRule,
 } from './plugins.service';
 
 export const pluginsRouter = Router();
@@ -12,6 +15,34 @@ export const pluginsRouter = Router();
 pluginsRouter.get('/', (_req, res) => {
   try {
     ok(res, { plugins: listPlugins() });
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
+// access plugin ACLs — registered before the generic "/:name" routes so the
+// literal path is never shadowed by the param matcher.
+pluginsRouter.get('/access/rules', (_req, res) => {
+  try {
+    ok(res, readAccessRules());
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
+pluginsRouter.post('/access/rules', (req, res) => {
+  try {
+    const { scope, action, pattern } = req.body ?? {};
+    ok(res, addAccessRule(scope, action, pattern));
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
+pluginsRouter.post('/access/rules/remove', (req, res) => {
+  try {
+    const { scope, action, pattern } = req.body ?? {};
+    ok(res, removeAccessRule(scope, action, pattern));
   } catch (e) {
     fail(res, e);
   }

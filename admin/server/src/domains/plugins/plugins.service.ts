@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { readRaw, writeRaw, configPath } from '../../core/files';
+import { readList, addToList, removeFromList } from '../../core/line-list';
 import { HARAKA_ROOT, PLUGINS_DIR } from '../../config';
 import {
   PLUGIN_CATALOG,
@@ -190,4 +191,101 @@ export function writePluginConfig(name: string, content: string): PluginConfigFi
   const configFile = resolveConfigFile(name);
   writeRaw(configFile, content);
   return readPluginConfig(name);
+}
+
+// ---------------------------------------------------------------------------
+// access plugin ACLs (PRECISE mode list files)
+//
+// The access plugin enforces allow/deny rules from per-phase list files, one
+// entry per line. We manage the plain (non-regex) lists for the three phases
+// the plugin actually handles: connection rDNS, MAIL FROM and RCPT TO. HELO is
+// NOT handled by this plugin. Filenames are fixed server-side and never taken
+// from the client, so the scope/action inputs can never traverse the FS.
+// ---------------------------------------------------------------------------
+
+export type AccessScope = 'connect' | 'mail' | 'rcpt';
+export type AccessAction = 'allow' | 'deny';
+
+export interface AccessRule {
+  id: string;
+  scope: AccessScope;
+  action: AccessAction;
+  pattern: string;
+}
+
+export interface AccessAcl {
+  enabled: boolean;
+  rules: AccessRule[];
+}
+
+// allow -> whitelist (pass), deny -> blacklist (block).
+const ACCESS_FILES: Record<AccessScope, Record<AccessAction, string>> = {
+  connect: {
+    allow: 'connect.rdns_access.whitelist',
+    deny: 'connect.rdns_access.blacklist',
+  },
+  mail: {
+    allow: 'mail_from.access.whitelist',
+    deny: 'mail_from.access.blacklist',
+  },
+  rcpt: {
+    allow: 'rcpt_to.access.whitelist',
+    deny: 'rcpt_to.access.blacklist',
+  },
+};
+
+const SCOPE_ORDER: AccessScope[] = ['connect', 'mail', 'rcpt'];
+const ACTION_ORDER: AccessAction[] = ['allow', 'deny'];
+
+/** Map a scope+action to its fixed list filename, validating both against the
+ *  allowlist so no client value can ever reach the filesystem path directly. */
+function accessFile(scope: string, action: string): string {
+  const byAction = ACCESS_FILES[scope as AccessScope];
+  if (!byAction) throw new Error(`Invalid scope: ${scope}`);
+  const file = byAction[action as AccessAction];
+  if (!file) throw new Error(`Invalid action: ${action}`);
+  return file;
+}
+
+/** A list entry must be a single, whitespace-free token so it can never inject
+ *  extra lines or a comment into the file. */
+function validatePattern(pattern: unknown): string {
+  if (typeof pattern !== 'string') throw new Error('Pattern is required');
+  const t = pattern.trim();
+  if (!t) throw new Error('Pattern is required');
+  if (t.length > 255) throw new Error('Pattern is too long');
+  if (/\s/.test(t)) throw new Error('Pattern cannot contain spaces');
+  if (t.startsWith('#')) throw new Error('Pattern cannot start with "#"');
+  return t;
+}
+
+function isAccessEnabled(): boolean {
+  return readPlugins().find((p) => p.name === 'access')?.enabled ?? false;
+}
+
+/** Read every managed access list and return the flattened rule set plus
+ *  whether the access plugin is currently enabled. */
+export function readAccessRules(): AccessAcl {
+  const rules: AccessRule[] = [];
+  for (const scope of SCOPE_ORDER) {
+    for (const action of ACTION_ORDER) {
+      const file = ACCESS_FILES[scope][action];
+      for (const pattern of readList(file)) {
+        rules.push({ id: `${scope}:${action}:${pattern}`, scope, action, pattern });
+      }
+    }
+  }
+  return { enabled: isAccessEnabled(), rules };
+}
+
+export function addAccessRule(scope: string, action: string, pattern: unknown): AccessAcl {
+  const file = accessFile(scope, action);
+  addToList(file, validatePattern(pattern));
+  return readAccessRules();
+}
+
+export function removeAccessRule(scope: string, action: string, pattern: unknown): AccessAcl {
+  const file = accessFile(scope, action);
+  removeFromList(file, validatePattern(pattern));
+  return readAccessRules();
 }

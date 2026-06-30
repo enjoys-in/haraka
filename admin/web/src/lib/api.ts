@@ -16,6 +16,9 @@ import type {
   SendMailResult,
   Banner,
   LogEntry,
+  AccessAcl,
+  AccessScope,
+  AccessAction,
 } from './types';
 
 const BASE = '/api';
@@ -49,6 +52,19 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify({ content }),
       }),
+    access: {
+      rules: () => request<AccessAcl>('/plugins/access/rules'),
+      add: (scope: AccessScope, action: AccessAction, pattern: string) =>
+        request<AccessAcl>('/plugins/access/rules', {
+          method: 'POST',
+          body: JSON.stringify({ scope, action, pattern }),
+        }),
+      remove: (scope: AccessScope, action: AccessAction, pattern: string) =>
+        request<AccessAcl>('/plugins/access/rules/remove', {
+          method: 'POST',
+          body: JSON.stringify({ scope, action, pattern }),
+        }),
+    },
   },
 
   customPlugins: {
