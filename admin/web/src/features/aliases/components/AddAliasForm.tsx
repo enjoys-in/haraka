@@ -4,6 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { AliasAction } from '@/lib/types';
 
 interface AddAliasFormProps {
@@ -66,16 +73,19 @@ export function AddAliasForm({ onAdd, busy }: AddAliasFormProps) {
             <Label htmlFor="alias-action" className="text-xs">
               Action
             </Label>
-            <select
-              id="alias-action"
+            <Select
               value={action}
-              onChange={(e) => setAction(e.target.value as AliasAction)}
-              className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+              onValueChange={(value) => setAction(value as AliasAction)}
             >
-              <option value="alias">Alias</option>
-              <option value="continue">Continue</option>
-              <option value="drop">Drop</option>
-            </select>
+              <SelectTrigger id="alias-action" className="h-8 text-xs">
+                <SelectValue placeholder="Select action" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alias">Alias</SelectItem>
+                <SelectItem value="continue">Continue</SelectItem>
+                <SelectItem value="drop">Drop</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-end">
             <Button
